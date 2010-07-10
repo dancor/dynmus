@@ -1,12 +1,13 @@
-name:           dynmus
-version:        0.1
-license:        GPL
-license-file:   LICENSE
-author:         dan corson <danl@alum.mit.edu>
-synopsis:       <syn>
-build-type:     Simple
-build-depends:  base, haskell98, process
+name:            dynmus
+version:         0.1
+license:         GPL
+license-file:    LICENSE
+author:          dan corson <danl@alum.mit.edu>
+synopsis:        <syn>
+build-type:      Simple
+build-depends:   alsa-core >= 0.5, alsa-seq >= 0.5, base >= 4
 
-executable:     dynmus
-main-is:        Main.hs
-hs-source-dirs: src
+executable:      dynmus
+main-is:         Main.hs
+hs-source-dirs:  src
+c-sources:       src/alsa_midi.c

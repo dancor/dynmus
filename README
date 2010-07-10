@@ -1,4 +1,6 @@
 plan
+- immed
+  - sin wave of arb freq
 - dynamic music
   - possibly eventually for game integration
   - but hopefully still an external somewhat-general library?
