@@ -12,7 +12,7 @@ void set_instrument(snd_seq_t ***seq, snd_seq_addr_t **dest_port,
   ev.data.control.value = instrument;
   ev.dest = **dest_port;
   snd_seq_event_output(**seq, &ev);
-  //printf("set_instrument: %d %d %d\n", tick, channel, instrument);
+  printf("set_instrument: %d %d %d\n", tick, channel, instrument);
 }
 
 static void note_event(snd_seq_t ***seq, snd_seq_addr_t **dest_port, 
@@ -29,7 +29,7 @@ static void note_event(snd_seq_t ***seq, snd_seq_addr_t **dest_port,
   ev.data.note.note = note;
   ev.data.note.velocity = velocity;
   snd_seq_event_output(**seq, &ev);
-  //printf("note_event: %d %d %d %d %d\n", tick, type, channel, note, velocity);
+  printf("note_event: %d %d %d %d %d\n", tick, type, channel, note, velocity);
 }
 
 void note_on(snd_seq_t ***seq, snd_seq_addr_t **dest_port, const int *queue,
