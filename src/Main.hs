@@ -1,98 +1,125 @@
-module Main where
+{-# LANGUAGE Arrows #-}
 
-import Control.Applicative
-import Data.List
+import Control.Concurrent
+import Control.Monad
+import Data.Audio
+import Data.Int
+import Data.IORef
+import Foreign.Marshal
+import Foreign.Ptr
+import Foreign.Storable
+import FRP.Yampa
+import FUtil
+import Sound.OpenAL
 
-import AlsaMidi
+import qualified Chunk
+import Chunk (Chunk(..))
 
-type Voice = [VoicePart]
+type Freq = Double
 
-data VoicePart = VoiceNote Note Vel Tick | VoicePause Tick
-  deriving (Eq, Ord, Show)
+main :: IO ()
+main = playSig lol
 
-data MidiEvent = 
-  SetInstr Instr | 
-  NoteOn Note Vel |
-  NoteOff Note
-  deriving (Eq, Ord, Show)
+lol :: SF () ((Freq, Sample), Event ())
+lol = time >>> 
+  (arr id &&& arr (  \ t -> 440 - (t / 10 + 220) / (t * 10 + 1)  ) ) >>> 
+  arr (\ (t, freq) -> (freq, 0.999 * sin (2 * pi * freq * t))) >>>
+  arr (flip (,) NoEvent)
 
-type Midi = [((Tick, Chan), MidiEvent)]
+oscSineT :: Freq -> SF a Sample
+oscSineT f0 = time >>> arr (sin . (2 * pi * f0 *))
 
-playMidi :: S7r -> Midi -> IO ()
-playMidi s7r = mapM_ $ \ a@((t, c), e) -> print a >> case e of
-  SetInstr i -> setInstrument s7r t c i
-  NoteOn n v -> noteOn s7r t c n v
-  NoteOff n -> noteOff s7r t c n
+--playSig :: SF () (Sample, Event ()) -> IO ()
+playSig sig = do
+  let
+    sampleRate = 44100
+    valsPerChunk = 4410
+    formatSize = sizeOf (undefined :: Int16)
+    chunkByteLen = valsPerChunk * formatSize
+    bufNum = 2
+  (dev, ctx, src, bufs) <- initOpenAL bufNum
+  mbChunkMV <- newEmptyMVar
+  iRef <- newIORef (0 :: Int, 0 :: Int)
+  ptrs <- replicateM bufNum $ mallocBytes chunkByteLen
+  let
+    chunks = map (flip Chunk chunkByteLen) ptrs
+  _ <- forkIO $ process bufNum sampleRate src bufs mbChunkMV
+  let
+    chunks = map (flip Chunk chunkByteLen) ptrs
+    sense _ = return (1.0 / fromIntegral sampleRate, Just ())
+    actuate _ ((f, s), e) = if isEvent e
+      then return True
+      else do
+        (chunkI, i) <- readIORef iRef
+        pokeElemOff (ptrs !! chunkI) i $ fromSample s
+        --when (i `mod` 200 == 0) $ print f
+        if i == valsPerChunk - 1
+          then do
+            putMVar mbChunkMV (Just $ chunks !! chunkI)
+            writeIORef iRef ((chunkI + 1) `mod` bufNum, 0)
+          else do
+            writeIORef iRef (chunkI, i + 1)
+        return False
+  reactimate (return ()) sense actuate lol
+  deInitOpenAL dev ctx src bufs
+  mapM_ free ptrs
 
-voiceToMidi :: Chan -> Voice -> Midi
-voiceToMidi c v0 = snd $ foldl' (\ (tCur, a) e -> case e of
-  VoiceNote n v t -> 
-    (tNew, a ++ [((tCur, c), NoteOn n v), ((tNew, c), NoteOff n)])
-    where tNew = tickSum tCur t
-  VoicePause t -> (tickSum tCur t, a)
-  ) (Tick 0, []) v0
+maybeM :: (Monad m) => m (Maybe a) -> m b -> (a -> m b) -> m b
+maybeM p n j = p >>= maybe n j
 
-myVoice = 
-  VoiceNote (Note 60) (Vel 70) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 70) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 70) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 70) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 60) (Vel 50) (Tick 48) :
-  VoiceNote (Note 48) (Vel 80) (Tick $ 48 * 4 * 2) :
+initOpenAL :: Int -> IO (Device, Context, Source, [Buffer])
+initOpenAL bufNum = 
+  maybeM (openDevice Nothing) (fail "opening OpenAL device") $ \ dev ->
+  maybeM (createContext dev []) (fail "opening OpenAL context") $ \ ctx -> do
+    currentContext $= Just ctx
+    [src] <- genObjectNames 1
+    bufs <- genObjectNames bufNum
+    return (dev, ctx, src, bufs)
 
-  {-
-  VoiceNote (Note 60) (Vel 50) (Tick $ 3 * 48) :
-  VoiceNote (Note 62) (Vel 50) (Tick 96) :
-  VoiceNote (Note 63) (Vel 50) (Tick 96) :
-  VoiceNote (Note 68) (Vel 50) (Tick 336) :
-  VoiceNote (Note 67) (Vel 100) (Tick 48) :
-  VoicePause (Tick 144) :
-  VoiceNote (Note 68) (Vel 50) (Tick 144) :
-  VoiceNote (Note 67) (Vel 100) (Tick 48) :
-  -}
-  []
+deInitOpenAL :: Device -> Context -> Source -> [Buffer] -> IO ()
+deInitOpenAL dev ctx src bufs = do
+  deleteObjectNames [src]
+  deleteObjectNames bufs
+  currentContext $= Nothing
+  destroyContext ctx
+  unlessM (closeDevice dev) $ fail "closing OpenAL device"
 
--- takes 2 ticks to reliably change instrument..
--- takes more to get even start not sure how many but 48 seems to work ok
--- can't change as we go (hangs at end)?  just permanent instruments for now.
-myMidi = 
-  ((Tick 0, Chan 0), SetInstr (Instr 41)) : 
-  ((Tick 0, Chan 1), SetInstr (Instr 43)) : 
-  ((Tick 0, Chan 1), SetInstr (Instr 43)) : 
-  ((Tick 0, Chan 1), SetInstr (Instr 43)) : 
-  --voiceToMidi (Chan 1) (VoicePause (Tick 2) : myVoice)
-  voiceToMidi (Chan 1) (VoicePause (Tick 48) : myVoice)
-  {-
-  ((Tick 2, Chan 1), NoteOn (Note 60) (Vel 100)) : 
-  ((Tick 300, Chan 1), NoteOff (Note 60)) : 
-  ((Tick 410, Chan 1), NoteOn (Note 60) (Vel 100)) : 
-  ((Tick 600, Chan 1), NoteOff (Note 60)) : 
-  []
-  -}
+waitForBuffer :: Source -> IO ()
+waitForBuffer src = do
+  n <- get $ buffersProcessed src
+  when (n == 0) $ waitForBuffer src
 
-main = do
-  s7r <- midiInitialize "dynmus" "128:0"
-  --setInstrument s7r (Tick 0) (Chan 0) (Instr 41)
-  --noteOn s7r (Tick 100) (Chan 0) (Note 60) (Vel 100)
-  playMidi s7r myMidi
-  --noteOff s7r (Tick 300) (Chan 0) (Note 60)
-  {-
-  tick <- steadyLine s7r 0 20 1 100 [60, 64, 68, 64, 60]
-  tick2 <- steadyLine s7r tick 20 1 100 $ 
-    map (subtract 2) [60, 64, 68, 64, 60]
-  tick3 <- steadyLine s7r tick2 20 1 100 $ 
-    map (subtract 4) [60, 64, 68, 64, 60]
-  -}
-  midiFinalize s7r
+waitForSource :: Source -> IO ()
+waitForSource src = do
+  state <- get $ sourceState src
+  when (state == Playing) $ threadDelay 10 >> waitForSource src
+
+process :: Int -> Int -> Source -> [Buffer] -> MVar (Maybe Chunk) -> IO ()
+process bufNum sampleRate src bufs mbChunkMV = do
+  forM_ bufs $ \ buf -> maybeM
+    (takeMVar mbChunkMV)
+    (return ()) $ \ chunk ->
+    do
+      bufferData buf $= createBufferData sampleRate chunk
+      queueBuffers src [buf]
+  play [src]
+  sqncWhileTrue . cycle . flip map bufs $ \ buf -> maybeM
+    (takeMVar mbChunkMV)
+    (return False) $ \ chunk ->
+    do
+      waitForBuffer src
+      unqueueBuffers src [buf]
+      bufferData (buf) $= createBufferData sampleRate chunk
+      queueBuffers src [buf]
+      return True
+
+sqncWhileTrue :: (Monad m) => [m Bool] -> m ()
+sqncWhileTrue [] = return ()
+sqncWhileTrue (m:ms) = m >>= \ r -> when r (sqncWhileTrue ms)
+
+createBufferData :: Int -> Chunk -> BufferData Int16
+createBufferData sampleRate chunk = BufferData
+  (MemoryRegion (Chunk.dataPtr chunk) (fromIntegral $ Chunk.byteLen chunk))
+  Mono16
+  (fromIntegral sampleRate)
 

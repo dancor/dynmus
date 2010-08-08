@@ -3,11 +3,10 @@ version:         0.1
 license:         GPL
 license-file:    LICENSE
 author:          dan corson <danl@alum.mit.edu>
-synopsis:        <syn>
+synopsis:        real-time dynamic music with mood-control inputs
 build-type:      Simple
-build-depends:   alsa-core >= 0.5, alsa-seq >= 0.5, base >= 4
+build-depends:   base >= 4, Yampa, OpenAL, HCodecs, FUtil
 
 executable:      dynmus
 main-is:         Main.hs
 hs-source-dirs:  src
-c-sources:       src/alsa_midi.c
