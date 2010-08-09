@@ -9,6 +9,7 @@ import Foreign.Marshal
 import Foreign.Ptr
 import Foreign.Storable
 import FRP.Yampa
+import FRP.Yampa.Utilities
 import FUtil
 import Sound.OpenAL
 
@@ -20,16 +21,27 @@ type Freq = Double
 main :: IO ()
 main = playSig lol
 
-lol :: SF () ((Freq, Sample), Event ())
-lol = time >>> 
-  (arr id &&& arr (  \ t -> 440 - (t / 10 + 220) / (t * 10 + 1)  ) ) >>> 
-  arr (\ (t, freq) -> (freq, 0.999 * sin (2 * pi * freq * t))) >>>
-  arr (flip (,) NoEvent)
+freqToSin :: SF Double Sample
+freqToSin = arr id &&& time >>>
+  arr (\ (t, freq) -> 0.999 * sin (2 * pi * freq * t))
+
+note1 :: SF a Sample
+note1 = constant 330 >>> freqToSin
+
+note2 :: SF a Sample
+note2 = constant 440 >>> freqToSin 
+
+each2Sec :: SF a b -> SF a b -> SF a (b, Event ())
+each2Sec f g =
+  (f &&& after 2 ()) `switch` const g &&& after 4 ()
+
+lol :: SF () (Sample, Event ())
+lol = each2Sec note1 note2
 
 oscSineT :: Freq -> SF a Sample
 oscSineT f0 = time >>> arr (sin . (2 * pi * f0 *))
 
---playSig :: SF () (Sample, Event ()) -> IO ()
+playSig :: SF () (Sample, Event ()) -> IO ()
 playSig sig = do
   let
     sampleRate = 44100
@@ -47,12 +59,11 @@ playSig sig = do
   let
     chunks = map (flip Chunk chunkByteLen) ptrs
     sense _ = return (1.0 / fromIntegral sampleRate, Just ())
-    actuate _ ((f, s), e) = if isEvent e
+    actuate _ (s, e) = if isEvent e
       then return True
       else do
         (chunkI, i) <- readIORef iRef
         pokeElemOff (ptrs !! chunkI) i $ fromSample s
-        --when (i `mod` 200 == 0) $ print f
         if i == valsPerChunk - 1
           then do
             putMVar mbChunkMV (Just $ chunks !! chunkI)
