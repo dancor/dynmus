@@ -1,136 +1,71 @@
 {-# LANGUAGE Arrows #-}
 
-import Control.Concurrent
-import Control.Monad
 import Data.Audio
-import Data.Int
-import Data.IORef
-import Foreign.Marshal
-import Foreign.Ptr
-import Foreign.Storable
 import FRP.Yampa
-import FRP.Yampa.Utilities
-import FUtil
-import Sound.OpenAL
 
-import qualified Chunk
-import Chunk (Chunk(..))
+import PlaySignal
 
+data Note = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
+  deriving Enum
+-- piano is (Tone A 0) to (Tone C 8), 8 octaves + change
+-- human hearing is about (Tone C 0) to (Tone C 10), 10 octaves
+data Tone = Tone Note Int
 type Freq = Double
+type Ampl = Double
+
+{-
+intToTone i = i % 12
+
+toneToInt
+-}
+
+toRates _ [] = []
+toRates x0 ((t1, x1):txs) = (x1 - x0) / t1 : toRates x1 txs
+
+--amplEnvelope :: Ampl -> [(Time, Ampl)] -> SF a (Ampl, Event ())
+amplEnvelope :: Ampl -> [(Time, Ampl)] -> (SF a Ampl, Time)
+amplEnvelope a0 tas = 
+  (afterEach trs >>> hold r0 >>> integral >>> arr (+ a0), sum ts)
+  where
+  trs = zip ts rs
+  ts = map fst tas
+  r0:rs = toRates a0 tas
 
 main :: IO ()
-main = playSig lol
+main = playSignal lol
 
-freqToSin :: SF Double Sample
-freqToSin = arr id &&& time >>>
-  arr (\ (t, freq) -> 0.999 * sin (2 * pi * freq * t))
+bellEnvelope :: (SF a Ampl, Time)
+bellEnvelope = amplEnvelope 0 [(0.1, 1), (10, 1), (10.25, 0)]
 
-note1 :: SF a Sample
-note1 = constant 330 >>> freqToSin
+{-
+noteToFreq :: Tone Note, Int) -> Freq
+-}
 
-note2 :: SF a Sample
-note2 = constant 440 >>> freqToSin 
+sinWave :: Freq -> SF a Sample
+sinWave f = time >>> arr (\ t -> 0.999 * sin (2 * pi * f * t))
+
+fI = fromIntegral
+
+toneFreq (Tone n o) = 55 * 2 ** (fI o + fI (fromEnum n - 21) / 12)
+
+bellTone :: Tone -> (SF a Sample, Time)
+bellTone t = first (\ e -> (e &&& sinWave (toneFreq t)) >>> arr (uncurry (*)))
+  bellEnvelope
+
+note1 :: SF a (Sample, Event ())
+--note1 = arr id &&& (afterEach [(1, 440)] >>> hold 330) >>> freqToSin
+note1 = (\ (s, t) -> s &&& after t ()) . bellTone $ Tone G 4
+--arr id &&& (afterEach [(1, 440)] >>> hold 330) >>> freqToSin
+
+{-
+note2 :: SF Time Sample
+note2 = arr id &&& constant 440 >>> freqToSin 
 
 each2Sec :: SF a b -> SF a b -> SF a (b, Event ())
 each2Sec f g =
   (f &&& after 2 ()) `switch` const g &&& after 4 ()
+-}
+--envelope :: /n
 
 lol :: SF () (Sample, Event ())
-lol = each2Sec note1 note2
-
-oscSineT :: Freq -> SF a Sample
-oscSineT f0 = time >>> arr (sin . (2 * pi * f0 *))
-
-playSig :: SF () (Sample, Event ()) -> IO ()
-playSig sig = do
-  let
-    sampleRate = 44100
-    valsPerChunk = 4410
-    formatSize = sizeOf (undefined :: Int16)
-    chunkByteLen = valsPerChunk * formatSize
-    bufNum = 2
-  (dev, ctx, src, bufs) <- initOpenAL bufNum
-  mbChunkMV <- newEmptyMVar
-  iRef <- newIORef (0 :: Int, 0 :: Int)
-  ptrs <- replicateM bufNum $ mallocBytes chunkByteLen
-  let
-    chunks = map (flip Chunk chunkByteLen) ptrs
-  _ <- forkIO $ process bufNum sampleRate src bufs mbChunkMV
-  let
-    chunks = map (flip Chunk chunkByteLen) ptrs
-    sense _ = return (1.0 / fromIntegral sampleRate, Just ())
-    actuate _ (s, e) = if isEvent e
-      then return True
-      else do
-        (chunkI, i) <- readIORef iRef
-        pokeElemOff (ptrs !! chunkI) i $ fromSample s
-        if i == valsPerChunk - 1
-          then do
-            putMVar mbChunkMV (Just $ chunks !! chunkI)
-            writeIORef iRef ((chunkI + 1) `mod` bufNum, 0)
-          else do
-            writeIORef iRef (chunkI, i + 1)
-        return False
-  reactimate (return ()) sense actuate lol
-  deInitOpenAL dev ctx src bufs
-  mapM_ free ptrs
-
-maybeM :: (Monad m) => m (Maybe a) -> m b -> (a -> m b) -> m b
-maybeM p n j = p >>= maybe n j
-
-initOpenAL :: Int -> IO (Device, Context, Source, [Buffer])
-initOpenAL bufNum = 
-  maybeM (openDevice Nothing) (fail "opening OpenAL device") $ \ dev ->
-  maybeM (createContext dev []) (fail "opening OpenAL context") $ \ ctx -> do
-    currentContext $= Just ctx
-    [src] <- genObjectNames 1
-    bufs <- genObjectNames bufNum
-    return (dev, ctx, src, bufs)
-
-deInitOpenAL :: Device -> Context -> Source -> [Buffer] -> IO ()
-deInitOpenAL dev ctx src bufs = do
-  deleteObjectNames [src]
-  deleteObjectNames bufs
-  currentContext $= Nothing
-  destroyContext ctx
-  unlessM (closeDevice dev) $ fail "closing OpenAL device"
-
-waitForBuffer :: Source -> IO ()
-waitForBuffer src = do
-  n <- get $ buffersProcessed src
-  when (n == 0) $ waitForBuffer src
-
-waitForSource :: Source -> IO ()
-waitForSource src = do
-  state <- get $ sourceState src
-  when (state == Playing) $ threadDelay 10 >> waitForSource src
-
-process :: Int -> Int -> Source -> [Buffer] -> MVar (Maybe Chunk) -> IO ()
-process bufNum sampleRate src bufs mbChunkMV = do
-  forM_ bufs $ \ buf -> maybeM
-    (takeMVar mbChunkMV)
-    (return ()) $ \ chunk ->
-    do
-      bufferData buf $= createBufferData sampleRate chunk
-      queueBuffers src [buf]
-  play [src]
-  sqncWhileTrue . cycle . flip map bufs $ \ buf -> maybeM
-    (takeMVar mbChunkMV)
-    (return False) $ \ chunk ->
-    do
-      waitForBuffer src
-      unqueueBuffers src [buf]
-      bufferData (buf) $= createBufferData sampleRate chunk
-      queueBuffers src [buf]
-      return True
-
-sqncWhileTrue :: (Monad m) => [m Bool] -> m ()
-sqncWhileTrue [] = return ()
-sqncWhileTrue (m:ms) = m >>= \ r -> when r (sqncWhileTrue ms)
-
-createBufferData :: Int -> Chunk -> BufferData Int16
-createBufferData sampleRate chunk = BufferData
-  (MemoryRegion (Chunk.dataPtr chunk) (fromIntegral $ Chunk.byteLen chunk))
-  Mono16
-  (fromIntegral sampleRate)
-
+lol = note1

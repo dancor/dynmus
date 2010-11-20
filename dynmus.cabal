@@ -5,7 +5,7 @@ license-file:    LICENSE
 author:          dan corson <danl@alum.mit.edu>
 synopsis:        real-time dynamic music with mood-control inputs
 build-type:      Simple
-build-depends:   base >= 4, Yampa, OpenAL, HCodecs, FUtil
+build-depends:   base >= 4, Yampa, OpenAL, HCodecs, yjtools
 
 executable:      dynmus
 main-is:         Main.hs
