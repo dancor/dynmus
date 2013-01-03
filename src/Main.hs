@@ -2,7 +2,6 @@
 
 import Control.Concurrent
 import Control.Monad
-import Data.Audio
 import Data.Int
 import Data.IORef
 import Foreign.Marshal
@@ -15,28 +14,41 @@ import Sound.OpenAL
 
 import qualified Chunk
 import Chunk (Chunk(..))
+import Player.OpenAL
 
+type Sample = Double
+fromSample = id
 type Freq = Double
+type CV = Double
 
 main :: IO ()
 main = playSig lol
 
-freqToSin :: SF Double Sample
-freqToSin = arr id &&& time >>>
-  arr (\ (t, freq) -> 0.999 * sin (2 * pi * freq * t))
+sinWave :: SF (Time, Freq) Sample
+sinWave = arr (\ (t, freq) -> 0.999 * sin (2 * pi * freq * t))
 
-note1 :: SF a Sample
-note1 = constant 330 >>> freqToSin
+note1 :: SF () Sample
+note1 = arr id &&& constant 330 >>> sinWave
 
-note2 :: SF a Sample
-note2 = constant 440 >>> freqToSin 
+note2 :: SF () Sample
+note2 = arr id &&& constant 440 >>> sinWave
 
-each2Sec :: SF a b -> SF a b -> SF a (b, Event ())
+each2Sec :: SF () Sample -> SF () Sample -> SF () (Sample, Event ())
 each2Sec f g =
   (f &&& after 2 ()) `switch` const g &&& after 4 ()
 
+{-
 lol :: SF () (Sample, Event ())
 lol = each2Sec note1 note2
+-}
+
+myVol :: SF () Sample
+myVol = arr (sin . (2 *))
+
+{-
+envGen :: Amp -> [(Time, Amp)] -> SF (Event ()) (CV, Event ())
+envGen
+-}
 
 oscSineT :: Freq -> SF a Sample
 oscSineT f0 = time >>> arr (sin . (2 * pi * f0 *))
@@ -71,7 +83,7 @@ playSig sig = do
           else do
             writeIORef iRef (chunkI, i + 1)
         return False
-  reactimate (return ()) sense actuate lol
+  reactimate (return ()) sense actuate sig
   deInitOpenAL dev ctx src bufs
   mapM_ free ptrs
 
@@ -79,7 +91,7 @@ maybeM :: (Monad m) => m (Maybe a) -> m b -> (a -> m b) -> m b
 maybeM p n j = p >>= maybe n j
 
 initOpenAL :: Int -> IO (Device, Context, Source, [Buffer])
-initOpenAL bufNum = 
+initOpenAL bufNum =
   maybeM (openDevice Nothing) (fail "opening OpenAL device") $ \ dev ->
   maybeM (createContext dev []) (fail "opening OpenAL context") $ \ ctx -> do
     currentContext $= Just ctx
