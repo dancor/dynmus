@@ -13,7 +13,6 @@ build-depends:
   , netwire
   , OpenAL
   , vector
-  , Yampa
 
 executable:      dynmus
 main-is:         Main.hs

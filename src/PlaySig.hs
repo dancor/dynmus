@@ -9,49 +9,17 @@ import Data.Int
 import Data.IORef
 import Foreign.Marshal
 import Foreign.Storable
-import qualified FRP.Yampa as Y
 import Prelude hiding ((.), id)
 import Sound.OpenAL
 
 import Chunk (Chunk(..))
 
-playSigYampa :: Y.SF () (Double, Y.Event ()) -> IO ()
-playSigYampa sig = do
-    let sampRate = 44100
-        valsPerChunk = 4410
-        formatSize = sizeOf (undefined :: Int16)
-        chunkByteLen = valsPerChunk * formatSize
-        bufNum = 2
-    (dev, ctx, src, bufs) <- initOpenAL bufNum
-    mbChunkMV <- newEmptyMVar
-    iRef <- newIORef (0 :: Int, 0 :: Int)
-    ptrs <- replicateM bufNum $ mallocBytes chunkByteLen
-    _ <- forkIO $ process bufNum sampRate src bufs mbChunkMV
-
-    -- Only this section differs between the Yampa and Netwire versions.
-    let chunks = map (flip Chunk chunkByteLen) ptrs
-        sense _ = return (1.0 / fromIntegral sampRate, Just ())
-        actuate _ (s, e) =
-            if Y.isEvent e
-            then return True
-            else do
-                (chunkI, i) <- readIORef iRef
-                pokeElemOff (ptrs !! chunkI) i $ fromSample s
-                if i == valsPerChunk - 1
-                    then do
-                        putMVar mbChunkMV (Just $ chunks !! chunkI)
-                        writeIORef iRef ((chunkI + 1) `mod` bufNum, 0)
-                    else writeIORef iRef (chunkI, i + 1)
-                return False
-    Y.reactimate (return ()) sense actuate sig
-
-    mapM_ free ptrs
-    deInitOpenAL dev ctx src bufs
-
 playSig :: WireP () Double -> IO ()
 playSig sig = do
     let sampRate = 44100
-        valsPerChunk = 4410
+        -- valsPerChunk = 4410
+        valsPerChunk = 2205
+        -- valsPerChunk = 1102
         formatSize = sizeOf (undefined :: Int16)
         chunkByteLen = valsPerChunk * formatSize
         bufNum = 2
@@ -60,8 +28,6 @@ playSig sig = do
     iRef <- newIORef (0 :: Int, 0 :: Int)
     ptrs <- replicateM bufNum $ mallocBytes chunkByteLen
     _ <- forkIO $ process bufNum sampRate src bufs mbChunkMV
-
-    -- Only this section differs between the Yampa and Netwire versions.
     let chunks = map (flip Chunk chunkByteLen) ptrs
         myLoop myWire session = do
             (exOrSigVal, myWire', session') <- stepSessionP myWire session ()
@@ -78,7 +44,6 @@ playSig sig = do
                     writeIORef iRef (chunkI, i + 1)
                 myLoop myWire' session'
     myLoop sig $ counterSession (1 / fromIntegral sampRate)
-
     mapM_ free ptrs
     deInitOpenAL dev ctx src bufs
 
