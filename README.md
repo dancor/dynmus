@@ -1,14 +1,17 @@
-Right now just trying to get a wave to play with Netwire and OpenAL.
-I'm trying to move from Yampa to Netwire since Yampa is poorly documented,
-feels very caught in an unfinished state, and is not currently developed.
+Right now just trying to get a wave to play with Netwire and
+OpenAL. I'm trying to move from Yampa to Netwire since Yampa
+is poorly documented, feels caught in an unfinished state,
+and is not currently developed.
 
-My current example plays smoothly under Yampa, but there are popping sounds
-under Netwire in all my efforts.  I think this is because the signal isn't
-flowing continuously at a fast enough rate.  Perhaps I need a different
-manner of handing the values from Netwire to OpenAL than the one which
-worked with Yampa.  I think Netwire itself should be fast enough since it
-is designed for efficiency, although maybe it wasn't intended for the rapid
-domain of audio synthesis.
+My current example plays smoothly under Yampa, but there are
+popping sounds under Netwire in all my efforts. I think this
+is because the signal isn't flowing continuously at a fast
+enough rate. Perhaps I need a different manner of handing
+the values from Netwire to OpenAL; different from this one
+which worked with Yampa. I think Netwire itself should be
+fast enough since it is designed for efficiency, although
+maybe it wasn't intended for the rapid domain of audio
+synthesis.
 
 # Old stuff
 
