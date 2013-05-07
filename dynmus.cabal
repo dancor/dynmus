@@ -1,23 +1,21 @@
 name:            dynmus
 version:         0.1
-license:         GPL
+license:         BSD3
 license-file:    LICENSE
 author:          dan corson <danl@alum.mit.edu>
 synopsis:        real-time dynamic music with mood-control inputs
 build-type:      Simple
 build-depends:
-      base >= 4
-    , vector
-    , portaudio
-    , either
-    , MissingH
-    , transformers
+    base
+  , cond
+  , HCodecs
+  , mtl
+  , netwire
+  , OpenAL
+  , vector
+  , Yampa
 
 executable:      dynmus
 main-is:         Main.hs
 hs-source-dirs:  src
-ghc-options:     -threaded -Wall
-extra-libraries: portaudio, asound, m
-other-modules:   Base
-include-dirs:    src
-c-sources:       src/my_f.c
+ghc-options:     -Wall -O2
