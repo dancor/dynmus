@@ -16,7 +16,7 @@ volume = 0.8
 -- Sine wave calling (sin).
 testSig :: WireP () Double
 testSig =
-    (\ t -> volume * sin (2 * pi * freq * t)) <$> time . for 2
+    (\ t -> volume * sin (2 * pi * freq * t)) <$> time . for 1
     -- <|>
     -- pure 0 . for 3
 
@@ -52,7 +52,7 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of
-      [] -> playSig testSig
+      [] -> playSig $ testSig
       ["table"] -> playSig testSigTable
       ["sawtooth"] -> playSig testSigSawtooth
       _ -> putStrLn "Usage: ./dynmus {yampa|table|sawtooth}"
