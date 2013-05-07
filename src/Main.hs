@@ -54,12 +54,12 @@ testSigTable = (
         (floor (freq * fromIntegral sineTableSize * t) `mod` sineTableSize))
     ) <$> time) . for 1
 
--- Sawtooth wave. 
+-- Sawtooth wave.
 --
 -- I get popping and maybe warbling and the pitch seems low.
 -- Program run time is correctly ~1.0 s.
 testSigSawtooth :: WireP () Double
-testSigSawtooth = ((decPart . (* freq)) <$> time) . for 1
+testSigSawtooth = (((volume *) . decPart . (* freq)) <$> time) . for 1
 
 main :: IO ()
 main = do

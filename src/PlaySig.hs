@@ -86,7 +86,7 @@ maybeM :: (Monad m) => m (Maybe a) -> m b -> (a -> m b) -> m b
 maybeM p n j = p >>= maybe n j
 
 initOpenAL :: Int -> IO (Device, Context, Source, [Buffer])
-initOpenAL bufNum = 
+initOpenAL bufNum =
     maybeM (openDevice Nothing) (fail "opening OpenAL device") $ \ dev ->
     maybeM (createContext dev []) (fail "opening OpenAL context") $ \ ctx ->
         do
