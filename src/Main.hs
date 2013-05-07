@@ -4,6 +4,7 @@ import Control.Wire
 import qualified Data.Vector as Vec
 import qualified FRP.Yampa as Y
 import Prelude hiding ((.), id)
+import System.Environment
 
 import PlaySig
 
@@ -36,16 +37,22 @@ sineTable = Vec.fromList $
         [0 .. sineTableSize - 1]
 
 -- Sine wave with a sine table.
-testSig2 :: WireP () Double
-testSig2 = (
+testSigTable :: WireP () Double
+testSigTable = (
     (\ t -> volume * (sineTable Vec.!
         (floor (freq * fromIntegral sineTableSize * t) `mod` sineTableSize))
     ) <$> time) . for 1
 
 -- Sawtooth wave. 
-testSig3 :: WireP () Double
-testSig3 = ((decPart . (* freq)) <$> time) . for 1
+testSigSawtooth :: WireP () Double
+testSigSawtooth = ((decPart . (* freq)) <$> time) . for 1
 
 main :: IO ()
---main = playSig testSig
-main = playSigYampa testSigYampa
+main = do
+    args <- getArgs
+    case args of
+      [] -> playSig testSig
+      ["yampa"] -> playSigYampa testSigYampa
+      ["table"] -> playSig testSigTable
+      ["sawtooth"] -> playSig testSigSawtooth
+      _ -> putStrLn "Usage: ./dynmus {yampa|table|sawtooth}"

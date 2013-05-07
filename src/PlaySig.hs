@@ -50,6 +50,11 @@ playSigYampa sig = do
 
 playSig :: WireP () Double -> IO ()
 playSig sig = do
+    let sampRate = 44100
+        valsPerChunk = 4410
+        formatSize = sizeOf (undefined :: Int16)
+        chunkByteLen = valsPerChunk * formatSize
+        bufNum = 2
     (dev, ctx, src, bufs) <- initOpenAL bufNum
     mbChunkMV <- newEmptyMVar
     iRef <- newIORef (0 :: Int, 0 :: Int)
