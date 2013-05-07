@@ -66,17 +66,17 @@ playSig sig = do
         myLoop myWire session = do
             (exOrSigVal, myWire', session') <- stepSessionP myWire session ()
             case exOrSigVal of
-                Left _ex -> return ()
-                Right sigVal -> do
-                    (chunkI, i) <- readIORef iRef
-                    pokeElemOff (ptrs !! chunkI) i $ fromSample sigVal
-                    if i == valsPerChunk - 1
-                      then do
-                        putMVar mbChunkMV (Just $ chunks !! chunkI)
-                        writeIORef iRef ((chunkI + 1) `mod` bufNum, 0)
-                      else
-                        writeIORef iRef (chunkI, i + 1)
-                    myLoop myWire' session'
+              Left _ex -> return ()
+              Right sigVal -> do
+                (chunkI, i) <- readIORef iRef
+                pokeElemOff (ptrs !! chunkI) i $ fromSample sigVal
+                if i == valsPerChunk - 1
+                  then do
+                    putMVar mbChunkMV (Just $ chunks !! chunkI)
+                    writeIORef iRef ((chunkI + 1) `mod` bufNum, 0)
+                  else
+                    writeIORef iRef (chunkI, i + 1)
+                myLoop myWire' session'
     myLoop sig $ counterSession (1 / fromIntegral sampRate)
 
     mapM_ free ptrs
@@ -89,11 +89,11 @@ initOpenAL :: Int -> IO (Device, Context, Source, [Buffer])
 initOpenAL bufNum =
     maybeM (openDevice Nothing) (fail "opening OpenAL device") $ \ dev ->
     maybeM (createContext dev []) (fail "opening OpenAL context") $ \ ctx ->
-        do
-            currentContext $= Just ctx
-            [src] <- genObjectNames 1
-            bufs <- genObjectNames bufNum
-            return (dev, ctx, src, bufs)
+    do
+        currentContext $= Just ctx
+        [src] <- genObjectNames 1
+        bufs <- genObjectNames bufNum
+        return (dev, ctx, src, bufs)
 
 deInitOpenAL :: Device -> Context -> Source -> [Buffer] -> IO ()
 deInitOpenAL dev ctx src bufs = do

@@ -33,8 +33,8 @@ testSigYampa =
 testSig :: WireP () Double
 testSig =
     (\ t -> volume * sin (2 * pi * freq * t)) <$> time . for 2
-    <|>
-    (\ t -> volume * sin (2 * pi * 2 * freq * t)) <$> time . for 3
+    -- <|>
+    -- pure 0 . for 3
 
 decPart :: Double -> Double
 decPart x = snd (properFraction x :: (Int, Double))
