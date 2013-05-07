@@ -9,7 +9,7 @@ import System.Environment
 import PlaySig
 
 freq :: Double
-freq = 880
+freq = 440
 
 volume :: Double
 volume = 0.8
@@ -31,7 +31,10 @@ testSigYampa =
 -- I get popping and maybe warbling and the pitch seems low.
 -- Program run time is correctly ~1.0 s.
 testSig :: WireP () Double
-testSig = (\ t -> volume * sin (2 * pi * freq * t)) <$> time . for 1
+testSig =
+    (\ t -> volume * sin (2 * pi * freq * t)) <$> time . for 2
+    <|>
+    (\ t -> volume * sin (2 * pi * 2 * freq * t)) <$> time . for 3
 
 decPart :: Double -> Double
 decPart x = snd (properFraction x :: (Int, Double))

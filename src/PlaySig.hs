@@ -77,7 +77,7 @@ playSig sig = do
                       else
                         writeIORef iRef (chunkI, i + 1)
                     myLoop myWire' session'
-    myLoop sig clockSession
+    myLoop sig $ counterSession (1 / fromIntegral sampRate)
 
     mapM_ free ptrs
     deInitOpenAL dev ctx src bufs
