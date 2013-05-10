@@ -6,7 +6,7 @@ through OpenAL.  My main current use is for a dynamic metronome.
 * I can sometimes hear a bit of warbling in some metronome uses.
   I need to figure out what might be the cause.
 * I would like to try again to switch from OpenAL to PortAudio,
-  but the current Haskel PortAudio binding is buggy, and I'm
+  but the current Haskell PortAudio binding is buggy, and I'm
   not terribly experienced with the FFI.
 
 # Past changes
