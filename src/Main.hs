@@ -49,7 +49,7 @@ note freq dur =
     --myTone = envOf $ liftA2 (+) (sine (1.5 * freq)) (sine freq)
     myTone = 
         liftA2 (-) (envOf $ sawtooth freq) $
-        liftA2 (*) (fromTo 1 0 0.15 <|> pure 0) buzz
+        liftA2 (*) (fromTo 1 0 0.1 <|> pure 0) buzz
 
 metronomeNote1 :: Double -> MyWD
 metronomeNote1 beatDur =
@@ -63,42 +63,11 @@ metronomeNoteN beatDur =
   where
     noteDur = 0.75 * beatDur
 
-metronome :: Double -> Int -> Int -> MyWD
-metronome bpm beatNum barNum =
-    andThenN barNum $ beat1 --> andThenN (beatNum - 1) beatN
-  where
-    beat1 = note (2 * aFreq) noteDur <|> pure 0 . for beatDur
-    beatN = note aFreq noteDur <|> pure 0 . for beatDur
-    noteDur = 0.75 * beatDur
-    beatDur = 60 / bpm
-
 andThenN :: (Monad m, Monoid e) => Int -> Wire e m a b -> Wire e m a b
 andThenN 0 _ = empty
 andThenN n w
   | n >= 1 = foldl1' (-->) $ replicate n w
   | otherwise = error "andThenN: negative n"
-
-priest :: MyWD
-priest =
-    priest1 -->
-    metronome 69 4 16
-
-priest1 :: MyWD
-priest1 =
-    metronome 76 4 17
-
-priest2 :: MyWD
-priest2 =
-    metronome 69 4 17
-
-{-
-angel :: MyWD
-angel =
-    -- 3 beats always
-    -- 10 measures of 48
-    -- 1 beat of 48
-    --
--}
 
 capEnds :: MyWD -> MyWD
 capEnds x = pure 0 . for 1 --> x --> pure 0 . for 1
@@ -121,6 +90,15 @@ gradient pre post nBeats =
 
 gradRep :: Double -> Double -> Int -> Int -> [Double]
 gradRep t1 t2 gradN totN = gradient t1 t2 gradN ++ replicate (totN - gradN) t2
+
+priestP1 :: [Double]
+priestP1 = replicate (16 * 4) 76
+
+priestP2 :: [Double]
+priestP2 = replicate (16 * 4) 69
+
+priest :: [Double]
+priest = priestP1 ++ priestP2
 
 t1Lento, t2Affrettando, t3Largamente :: Double
 t1Lento       = 48
@@ -221,6 +199,9 @@ main = do
     args <- getArgs
     case args of
       [] -> playSig vol testSig
+      ["priest"] -> playSig vol $ renderBeats 4 priest
+      ["priest1"] -> playSig vol $ renderBeats 4 priestP1
+      ["priest2"] -> playSig vol $ renderBeats 4 priestP2
       ["agony"] -> playSig vol $ renderBeats 3 agony
       ["agony1"] -> playSig vol $ renderBeats 3 agonyP1
       ["agony2"] -> playSig vol $ renderBeats 3 agonyP2
@@ -238,10 +219,6 @@ main = do
                     " bpm"
                 bpmLoop tEnd
         bpmLoop tStart0
-      {-
-      ["table"] -> playSig testSigTable
-      ["sawtooth"] -> playSig testSigSawtooth
-      -}
       _ -> putStrLn "Usage: ./dynmus {yampa|table|sawtooth}"
 
 {-
