@@ -2,6 +2,7 @@ module PlaySig where
 
 import Control.Concurrent
 import qualified Control.Conditional as Cond
+import Control.Exception
 import Control.Monad
 import Control.Wire hiding (when)
 import Data.Audio
@@ -15,9 +16,13 @@ import Sound.OpenAL
 import Chunk (Chunk(..))
 import ForkWait
 
-playSig :: WireP () Double -> IO ()
-playSig sig = do
-    let sampRate = 44100
+clipVol :: Double
+clipVol = 0.9999  -- another 9 and a basic sin wave clicks
+
+playSig :: Double -> WireP () Double -> IO ()
+playSig volume sig = do
+    let bufNum = 2
+        sampRate = 44100
         -- Higher values still cause total running time to get progressively
         -- shorter than it should be.  Not sure why though, since we are
         -- pushing the last block (full block even, right?) when sig ends.
@@ -29,40 +34,50 @@ playSig sig = do
         --valsPerChunk = 1102
         formatSize = sizeOf (undefined :: Int16)
         chunkByteLen = valsPerChunk * formatSize
-        bufNum = 2
-    (dev, ctx, src, bufs) <- initOpenAL bufNum
-    mbChunkMV <- newEmptyMVar
-    iRef <- newIORef (0 :: Int, 0 :: Int)
-    ptrs <- replicateM bufNum $ mallocBytes chunkByteLen
-    processW <-
-        snd <$> forkIOWaitable (process bufNum sampRate src bufs mbChunkMV)
-    let chunks = map (flip Chunk chunkByteLen) ptrs
-        myLoop myWire session = do
-            (exOrSigVal, myWire', session') <- stepSessionP myWire session ()
-            case exOrSigVal of
-              Left _ex -> do
-                (chunkI, _i) <- readIORef iRef
-                -- Though the latter part of this chunk will be old?
-                putMVar mbChunkMV (Just $ chunks !! chunkI)
-                putMVar mbChunkMV Nothing
-              Right sigVal -> do
-                (chunkI, i) <- readIORef iRef
-                pokeElemOff (ptrs !! chunkI) i $ fromSample sigVal
-                if i == valsPerChunk - 1
-                  then do
+    withOpenAL bufNum $ \ _dev _ctx src bufs -> do
+        mbChunkMV <- newEmptyMVar
+        iRef <- newIORef (0 :: Int, 0 :: Int)
+        ptrs <- replicateM bufNum $ mallocBytes chunkByteLen
+        processW <- snd <$> forkIOWaitable
+            (process bufNum sampRate src bufs mbChunkMV)
+        let chunks = map (flip Chunk chunkByteLen) ptrs
+            myLoop myWire session = do
+                (exOrSigVal, myWire', session') <-
+                    stepSessionP myWire session ()
+                case exOrSigVal of
+                  Left _ex -> do
+                    (chunkI, _i) <- readIORef iRef
+                    -- Though the latter part of this chunk will be old?
                     putMVar mbChunkMV (Just $ chunks !! chunkI)
-                    writeIORef iRef ((chunkI + 1) `mod` bufNum, 0)
-                    --putStrLn "."
-                  else
-                    writeIORef iRef (chunkI, i + 1)
-                myLoop myWire' session'
-    myLoop sig $ counterSession (1 / fromIntegral sampRate)
-    forkedIOWait processW
-    mapM_ free ptrs
-    deInitOpenAL dev ctx src bufs
+                    putMVar mbChunkMV Nothing
+                  Right sigVal -> do
+                    (chunkI, i) <- readIORef iRef
+                    pokeElemOff (ptrs !! chunkI) i $ fromSample sigVal
+                    if i == valsPerChunk - 1
+                      then do
+                        putMVar mbChunkMV (Just $ chunks !! chunkI)
+                        writeIORef iRef ((chunkI + 1) `mod` bufNum, 0)
+                        --putStrLn "."
+                      else
+                        writeIORef iRef (chunkI, i + 1)
+                    myLoop myWire' session'
+        myLoop ((* (clipVol * volume)) <$> sig) $
+            counterSession (1 / fromIntegral sampRate)
+        forkedIOWait processW
+        mapM_ free ptrs
 
 maybeM :: (Monad m) => m (Maybe a) -> m b -> (a -> m b) -> m b
 maybeM p n j = p >>= maybe n j
+
+uncurry4 :: (a -> b -> c -> d -> e) -> (a, b, c, d) -> e
+uncurry4 f (a, b, c, d) = f a b c d
+
+withOpenAL
+    :: Int
+    -> (Device -> Context -> Source -> [Buffer] -> IO ())
+    -> IO ()
+withOpenAL bufNum =
+    bracket (initOpenAL bufNum) (uncurry4 deInitOpenAL) . uncurry4
 
 initOpenAL :: Int -> IO (Device, Context, Source, [Buffer])
 initOpenAL bufNum =
