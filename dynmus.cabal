@@ -7,15 +7,12 @@ synopsis:        real-time dynamic music with mood-control inputs
 build-type:      Simple
 build-depends:
     base
-  , cond
-  , HCodecs
-  , mtl
-  , netwire
-  , OpenAL
-  , time
+  -- , tomato-rubato-openal
   , vector
 
 executable:      dynmus
 main-is:         Main.hs
 hs-source-dirs:  src
 ghc-options:     -Wall -O2 -threaded
+c-sources:       src/cbits/lol.c
+extra-libraries: portaudio
