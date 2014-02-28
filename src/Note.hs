@@ -1,13 +1,26 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Note where
 
 import Freq
 
-data Note = Note !Int !Int !Int
+data Note a = Note !Int !Int !a
 
-noteFreq :: Note -> Freq
-noteFreq !(Note notesPerOctave octave note) =
-    440 * 2 ** theExp
-  where
-    theExp :: Float
-    theExp = fromIntegral ((octave - 4) * notesPerOctave + note) /
-        fromIntegral notesPerOctave
+class NoteFreq a where
+    noteFreq :: Note a -> Freq
+
+instance NoteFreq Int where
+    noteFreq !(Note notesPerOctave octave note) =
+        440 * 2 ** theExp
+      where
+        theExp :: Float
+        theExp = fromIntegral ((octave - 4) * notesPerOctave + note) /
+            fromIntegral notesPerOctave
+
+instance NoteFreq Float where
+    noteFreq !(Note notesPerOctave octave note) =
+        440 * 2 ** theExp
+      where
+        theExp :: Float
+        theExp = (fromIntegral ((octave - 4) * notesPerOctave) + note) /
+            fromIntegral notesPerOctave

@@ -2,6 +2,7 @@
 
 module Portaudio where
 
+import Control.Exception
 import Control.Monad
 import qualified Data.Vector.Storable as DVS
 import Foreign
@@ -29,11 +30,8 @@ dieOnErr f = do
   ret <- f
   when (ret /= 0) $ error "Aborting due to PortAudio error."
 
-withPortaudio :: IO () -> IO ()
-withPortaudio f = do
-    dieOnErr c_start_lol
-    f
-    dieOnErr c_end_lol
+withPortaudio :: IO a -> IO a
+withPortaudio f = bracket_ (dieOnErr c_start_lol) (dieOnErr c_end_lol) f
 
 playSamples :: [Sample] -> IO ()
 playSamples [] =  return ()

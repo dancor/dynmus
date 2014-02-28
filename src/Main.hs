@@ -2,6 +2,7 @@
 
 import Basic
 import Freq
+import Note
 import Portaudio
 import SampTbl
 
