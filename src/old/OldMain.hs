@@ -20,7 +20,7 @@ aFreq :: Double
 aFreq = 440
 
 sine :: Double -> MyWD
-sine freq = (\ t -> sin (2 * pi * freq * t)) <$> time
+sine freq = (\t -> sin (2 * pi * freq * t)) <$> time
 
 decPart :: Double -> Double
 decPart x = snd (properFraction x :: (Int, Double))
@@ -85,7 +85,7 @@ renderBeats beatsPerBar bpms =
 
 gradient :: Double -> Double -> Int -> [Double]
 gradient pre post nBeats =
-    map (\ i -> pre + fromIntegral i * rate) [1 .. nBeats]
+    map (\i -> pre + fromIntegral i * rate) [1 .. nBeats]
   where
     rate = (post - pre) / fromIntegral (nBeats + 1)
 
@@ -223,23 +223,3 @@ doMain args = do
 
 main :: IO ()
 main = getArgs >>= doMain
-
-{-
-sineTableSize :: Int
-sineTableSize = 800
-
-sineTable :: Vec.Vector Double
-sineTable = Vec.fromList $
-    map (\i -> sin $ (fromIntegral i / fromIntegral sineTableSize) * pi * 2)
-        [0 .. sineTableSize - 1]
-
--- Sine wave with a sine table.
---
--- I get popping and maybe warbling and the pitch seems low.
--- Program run time is correctly ~1.0 s.
-testSigTable :: WireP () Double
-testSigTable = (
-    (\ t -> (sineTable Vec.!
-        (floor (aFreq * fromIntegral sineTableSize * t) `mod` sineTableSize))
-    ) <$> time) . for 1
--}

@@ -4,15 +4,12 @@ module SampTbl where
 
 import qualified Data.Vector.Unboxed as DVU
 
-type SampTbl = DVU.Vector Sample
-
 type Sample = Float
 
-sinTblSize :: Int
-sinTblSize = 10000
+type SampTbl = DVU.Vector Sample
 
-sinTbl :: SampTbl
-sinTbl = genSinTbl sinTblSize
+sin10k :: SampTbl
+sin10k = genSinTbl 10000
 
 genSinTbl :: Int -> SampTbl
 genSinTbl !tblSize =
@@ -20,3 +17,15 @@ genSinTbl !tblSize =
   where
     xChange :: Float
     xChange = 2 * pi / fromIntegral tblSize
+
+genSinsTbl :: Int -> [Float] -> SampTbl
+genSinsTbl !tblSize !harmonicAmplitudes = DVU.generate tblSize f
+  where
+    xChange :: Float
+    xChange = 2 * pi / fromIntegral tblSize
+    f :: Int -> Float
+    f x = sum $ zipWith (*) harmonicAmplitudes
+        [sin (xChange * i * fromIntegral x) | i <- [1..8]]
+
+trip10k :: SampTbl
+trip10k = genSinsTbl 10000 [1/3, 1/9, 1/9, 1/9, 1/12, 1/12, 1/12, 1/12]

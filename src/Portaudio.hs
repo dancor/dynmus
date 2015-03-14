@@ -8,16 +8,22 @@ import qualified Data.Vector.Storable as DVS
 import Foreign
 import Foreign.C.Types
 
-type Sample = Float
+import SampTbl
 
 foreign import ccall unsafe "lol.h start_lol"
     c_start_lol :: IO CInt
 
-foreign import ccall unsafe "lol.h mid_lol"
-    c_mid_lol :: Ptr CFloat -> CInt -> IO CInt
+foreign import ccall unsafe "lol.h pa_write"
+    c_pa_write :: Ptr CFloat -> CInt -> IO CInt
 
 foreign import ccall unsafe "lol.h end_lol"
     c_end_lol :: IO CInt
+
+sampleRate :: Int
+sampleRate = 44100
+
+sampleRateF :: Float
+sampleRateF = fromIntegral sampleRate
 
 framesPerBuffer :: Int
 framesPerBuffer = 32
@@ -42,4 +48,4 @@ playSamples samps = do
 
 playVec :: DVS.Vector CFloat -> IO ()
 playVec vec = DVS.unsafeWith vec $ \ptr ->
-    dieOnErr (c_mid_lol ptr . fromIntegral $ DVS.length vec)
+    dieOnErr (c_pa_write ptr . fromIntegral $ DVS.length vec)

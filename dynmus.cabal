@@ -7,8 +7,13 @@ synopsis:        real-time dynamic music with mood-control inputs
 build-type:      Simple
 build-depends:
     base
+  , mtl
+  , netwire
+  , split
+  , time
   -- , tomato-rubato-openal
   , vector
+  , WAVE
 
 executable:      dynmus
 main-is:         Main.hs

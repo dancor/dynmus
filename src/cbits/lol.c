@@ -33,7 +33,7 @@ error:
     return err;
 }
 
-int mid_lol(float *buffer, int frames_per_buffer) {
+int pa_write(float *buffer, int frames_per_buffer) {
     PaError err = 0;
     err = Pa_WriteStream(stream, buffer, frames_per_buffer);
     if (err) goto error;
@@ -63,7 +63,7 @@ int mid_lols(void) {
             }
             buffer[i] = cur_phase;
         }
-        err = mid_lol(buffer, frames_per_buffer);
+        err = pa_write(buffer, frames_per_buffer);
         if (err) return err;
     }
     return err;
