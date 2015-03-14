@@ -4,6 +4,8 @@ module Note where
 
 import Freq
 
+type N = Note 12
+
 data Note a = Note
     { nNotesPerOctave :: !Int
     , nOctave         :: !Int

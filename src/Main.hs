@@ -8,7 +8,7 @@ import Prelude
 
 import Data.WAVE
 
-import Basic
+import Dynmus
 --import Note
 --import PlayWire
 import Portaudio
@@ -22,23 +22,16 @@ main = do
     withPortaudio $ playWire sound
 -}
 
+secsOf :: Float -> [a] -> [a]
+secsOf = 
+
 main :: IO ()
 main = 
     {-
     withPortaudio $ mapM_ playSamples $ chunksOf framesPerBuffer myList
     -}
-    toWav "out.wav" myList
-
-myEnvelope :: [Float]
-myEnvelope =
-    [fromIntegral x / fromIntegral onsetTime | x <- [1 .. onsetTime]] ++
-    replicate midTime 1 ++
-    [fromIntegral x / fromIntegral fallTime | x <- reverse [1 .. fallTime]]
-  where
-    totalTime = sampleRate * 2
-    onsetTime = sampleRate `div` 5
-    midTime = totalTime - onsetTime - fallTime
-    fallTime = sampleRate `div` 8
+    toWav "out.wav" $
+        `secOf` myList
 
 {-
 uncons :: [a] -> (a, [a])
