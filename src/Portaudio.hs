@@ -19,12 +19,6 @@ foreign import ccall unsafe "lol.h pa_write"
 foreign import ccall unsafe "lol.h end_lol"
     c_end_lol :: IO CInt
 
-sampleRate :: Int
-sampleRate = 44100
-
-sampleRateF :: Float
-sampleRateF = fromIntegral sampleRate
-
 framesPerBuffer :: Int
 framesPerBuffer = 32
 

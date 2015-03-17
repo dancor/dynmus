@@ -1,18 +1,20 @@
 {-# LANGUAGE BangPatterns #-}
 
-import Data.List
-import Data.List.Split
 --import FRP.Netwire
 --import Prelude hiding ((.), id)
-import Prelude
 
+import Data.List.Split
 import Data.WAVE
+import System.Random
 
+import Chord
 import Dynmus
---import Note
+import Note
 --import PlayWire
 import Portaudio
 import SampTbl
+
+type ScaleStep = Int
 
 {-
 main :: IO ()
@@ -22,68 +24,53 @@ main = do
     withPortaudio $ playWire sound
 -}
 
-secsOf :: Float -> [a] -> [a]
-secsOf = 
+myNote :: NoteNum -> Duration -> Signal
+myNote n d = zipWith (*) (noteEnvel d)
+    (realizeFreqs trip10k . repeat $ noteNumFreq n)
+
+-- | A pattern to test out the feel of different hexatonic scales.
+myPattern :: [ScaleStep]
+myPattern =
+    [ 1, 3, 5, 3, 1, 3, 5, 3
+    , 1, 4, 6, 4, 1, 6, 7, 6
+    , 6, 5, 4, 3, 5, 4, 3, 2
+    , 1, 1, 1, 1, 1
+    ]
+
+realizeScaleStep :: NoteNum -> ModeQual -> ScaleStep -> NoteNum
+realizeScaleStep n m s = n + sOctave * 12 + (0:m) !! sIndex
+  where
+    (sOctave, sIndex) = (s - 1) `divMod` (length m + 1)
 
 main :: IO ()
-main = 
+main = do
+    chordI <- randomRIO (0, length hexachords - 1)
+    let (chordQ, name) = hexachords !! chordI
+        mode = myChooseMode chordQ
+    putStrLn ""
+    putStrLn name
+    putStrLn ""
+    withPortaudio . mapM_ playSamples . chunksOf framesPerBuffer .
     {-
-    withPortaudio $ mapM_ playSamples $ chunksOf framesPerBuffer myList
+    toWav "out.wav" .
     -}
-    toWav "out.wav" $
-        `secOf` myList
+         map (* 0.5) $
+         concatMap (flip myNote 0.125 . realizeScaleStep (noteNum nC4) mode)
+             myPattern
+         {-
+         zipWith (\a b -> (a + b) / 2)
+             (myNote nEb4 1)
+             (myNote nG4 1) ++
+         zipWith4 (\a b c d -> (a + b + c + d) / 4)
+             (myNote nBb4 1)
+             (myNote nD5 1)
+             (myNote nF5 1)
+             (myNote nAb4 1)
+         -}
 
-{-
-uncons :: [a] -> (a, [a])
-uncons (x:xs) = (x, xs)
-uncons [] = error "uncons: []"
-
-proportions :: [Float] -> [[Float]] -> [Float]
-proportions coeffs = proportions2 (map (/ s) coeffs) where s = sum coeffs
-
-proportions2 :: [Float] -> [[Float]] -> [Float]
-proportions2 _ ([]:_)  = []
-proportions2 !coeffs theLists = 
-    sum (zipWith (*) coeffs theHeads) : proportions2 coeffs theTails
-  where
-    (theHeads, theTails) = unzip $ map uncons theLists
-
-myBoop :: [Float] -> [Float]
-myBoop coeffs = zipWith (*) myEnvelope $ proportions coeffs
-    [ realizeFreqs sin10k $ replicate sampleRate 440
-    , realizeFreqs sin10k $ replicate sampleRate (440 * 2)
-    , realizeFreqs sin10k $ replicate sampleRate (440 * 3)
-    , realizeFreqs sin10k $ replicate sampleRate (440 * 4)
-    , realizeFreqs sin10k $ replicate sampleRate (440 * 5)
-    , realizeFreqs sin10k $ replicate sampleRate (440 * 6)
-    , realizeFreqs sin10k $ replicate sampleRate (440 * 7)
-    , realizeFreqs sin10k $ replicate sampleRate (440 * 8)
-    ]
--}
-
-toWav :: String -> [Float] -> IO ()
+toWav :: String -> Signal -> IO ()
 toWav f floatSamples = putWAVEFile f $
     WAVE (WAVEHeader 1 sampleRate 32 Nothing) $
     map (:[]) $ map floatToInt32 floatSamples
   where
     floatToInt32 = round . (* 2147483647)
-
-myList :: [Sample]
-myList = map (* 0.5) $
-    {-
-     ++
-    replicate 1000 0
-    -}
-    concatMap myBoop
-    [
-      [1, 0, 0, 0, 0, 0, 0, 0]
-    , [1, 1, 1, 1, 0, 0, 0, 0]
-    , [3, 1, 1, 1, 0, 0, 0, 0]
-    {-
-    , [1, 0, 0, 0, 1, 1, 1, 1]
-    , [5, 3, 3, 3, 1, 1, 1, 1]
-    -}
-    -- [1, 2, 3, 4]
-    -- [4, 3, 2, 1]
-    -- [1, 0, 0, 0]
-    ] ++ replicate 1000 0

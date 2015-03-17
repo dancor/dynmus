@@ -9,6 +9,7 @@ build-depends:
     base
   , mtl
   , netwire
+  , random
   , split
   , time
   -- , tomato-rubato-openal

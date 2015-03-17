@@ -8,6 +8,12 @@ type Sample = Float
 
 type SampTbl = DVU.Vector Sample
 
+sampleRate :: Int
+sampleRate = 44100
+
+sampleRateF :: Float
+sampleRateF = fromIntegral sampleRate
+
 sin10k :: SampTbl
 sin10k = genSinTbl 10000
 
