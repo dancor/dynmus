@@ -1,24 +1,46 @@
-name:            dynmus
-version:         0.1
-license:         BSD3
-license-file:    LICENSE
-author:          dan corson <danl@alum.mit.edu>
-synopsis:        real-time dynamic music with mood-control inputs
-build-type:      Simple
-build-depends:
-    base
-  , mtl
-  , netwire
-  , random
-  , split
-  , time
-  -- , tomato-rubato-openal
-  , vector
-  , WAVE
+name:           dynmus
+version:        0.1
+synopsis:       real-time dynamic music
+description:    currently looking at hexachord voicings
+license:        BSD3
+license-file:   LICENSE
+author:         dan corson <danl@alum.mit.edu>
+cabal-version:  >= 1.8
+build-type:     Simple
 
-executable:      dynmus
-main-is:         Main.hs
-hs-source-dirs:  src
-ghc-options:     -Wall -O2 -threaded
-c-sources:       src/cbits/lol.c
-extra-libraries: portaudio
+source-repository head
+  type: git
+  location: https://github.com/dancor/dynmus
+
+executable dynmus
+  hs-source-dirs:   src
+  main-is:          Main.hs
+  ghc-options:      -Wall -O2 -threaded
+  c-sources:        src/cbits/lol.c
+  extra-libraries:  portaudio
+  build-depends:
+      base
+    , haskore
+    , MissingH
+    , mtl
+    , netwire
+    , process
+    , random
+    , soundfont
+    , split
+    , time
+    -- , tomato-rubato-openal
+    , vector
+    , WAVE
+
+test-suite test
+  hs-source-dirs:   src
+  main-is:          Tests.hs
+  type:             exitcode-stdio-1.0
+  build-depends:
+      base
+    , haskore
+    , process
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck

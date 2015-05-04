@@ -5,7 +5,7 @@ int start_lol(void) {
     int sample_rate = 44100;
     int frames_per_buffer = 32;
 
-    printf("PortAudio Test: output sawtooth wave.\n");
+    //printf("PortAudio Test: output sawtooth wave.\n");
     /* Initialize library before making any other calls. */
     err = Pa_Initialize();
     if (err) goto error;
@@ -77,7 +77,7 @@ int end_lol(void) {
     err = Pa_CloseStream(stream);
     if (err) goto error;
     Pa_Terminate();
-    printf("Test finished.\n");
+    //printf("Test finished.\n");
     return err;
 error:
     Pa_Terminate();

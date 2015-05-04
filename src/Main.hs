@@ -3,74 +3,119 @@
 --import FRP.Netwire
 --import Prelude hiding ((.), id)
 
-import Data.List.Split
+import Control.Applicative
+import Control.Monad
+import Data.Function
+import Data.List
+import Data.List.Utils
+import Data.Maybe
+import qualified Data.Vector as V
 import Data.WAVE
+import Debug.Trace
+import Haskore.Basic.Pitch as Pitch
+import qualified Sound.Font as SF
+import System.Environment
 import System.Random
 
 import Chord
-import Dynmus
 import Note
---import PlayWire
 import Portaudio
 import SampTbl
+import LolHaskore
+import MusCalc
 
-type ScaleStep = Int
+chooseChordIO :: IO (Int, (ChordQual, String))
+chooseChordIO = do
+    i <- randomRIO (0, length namedHexachords - 1)
+    return $ (i, namedHexachords !! i)
+
+cFromList = id
+cToList = id
 
 {-
-main :: IO ()
-main = do
-    let sound :: Wire (Timed Float ()) () Identity a Float
-        sound = for (1 / 440) . integral (-0.5) . 440 --> sound
-    withPortaudio $ playWire sound
+vchoiceIO :: V.Vector a -> IO a
+vchoiceIO xs = do
+    i <- randomRIO (1, V.length xs)
+    return $ xs V.! (i - 1)
 -}
+choiceIO :: [a] -> IO a
+choiceIO xs = do
+    i <- randomRIO (1, length xs)
+    return $ xs !! (i - 1)
 
-myNote :: NoteNum -> Duration -> Signal
-myNote n d = zipWith (*) (noteEnvel d)
-    (realizeFreqs trip10k . repeat $ noteNumFreq n)
+adjDiffs :: Num a => [a] -> [a]
+adjDiffs v = zipWith (-) (tail v) v
 
--- | A pattern to test out the feel of different hexatonic scales.
-myPattern :: [ScaleStep]
-myPattern =
-    [ 1, 3, 5, 3, 1, 3, 5, 3
-    , 1, 4, 6, 4, 1, 6, 7, 6
-    , 6, 5, 4, 3, 5, 4, 3, 2
-    , 1, 1, 1, 1, 1
-    ]
+smallestDiff :: MyC -> Int
+smallestDiff = minimum . map abs . adjDiffs . sort . cToList
 
-realizeScaleStep :: NoteNum -> ModeQual -> ScaleStep -> NoteNum
-realizeScaleStep n m s = n + sOctave * 12 + (0:m) !! sIndex
-  where
-    (sOctave, sIndex) = (s - 1) `divMod` (length m + 1)
+noteDistFromChord :: Int -> MyC -> Int
+noteDistFromChord n ns2 = minimum [abs (n - n2) | n2 <- ns2]
+
+chordDist :: MyC -> MyC -> Int
+chordDist ns1 ns2 = sum [noteDistFromChord n ns2 | n <- ns1]
+
+pickNextCard :: MyC -> [MyC] -> IO MyC
+-- pickNextCard prev curs = choiceIO $ filter (chordDist) curs
+pickNextCard prev curs = choiceIO $ take 10 $
+    sortBy (compare `on` chordDist prev) $
+    filter (/= prev) curs
+
+pickCards :: [[MyC]] -> IO [MyC]
+pickCards (hands1:handsRest) = do
+    let loop _ [] = return []
+        loop prev (h:hRest) = do
+            cur <- pickNextCard prev h
+            r <- loop cur hRest
+            return $ cur : r
+    hand1 <- choiceIO hands1
+    (hand1 :) <$> loop hand1 handsRest
+pickCards [] = error "pickCards: no hands"
+
+chooseBaseline :: IO [Absolute]
+chooseBaseline = do
+    let lineLen = 4
+        absPitchMin = -24
+        absPitchMax = 0
+        jumpMax = 4
+        nextPitch p = randomRIO
+            ( max absPitchMin (p - jumpMax)
+            , min absPitchMax (p + jumpMax)
+            )
+        loop n pPrev = if n <= 1 then return [] else do
+            p <- nextPitch pPrev
+            (p:) <$> loop (n - 1) p
+    pitch1 <- randomRIO (absPitchMin, absPitchMax)
+    (pitch1:) <$> loop lineLen pitch1
+
+intToMus :: Absolute -> Mus
+intToMus = (\x -> note x qn na) . Pitch.fromInt
 
 main :: IO ()
 main = do
-    chordI <- randomRIO (0, length hexachords - 1)
-    let (chordQ, name) = hexachords !! chordI
-        mode = myChooseMode chordQ
-    putStrLn ""
-    putStrLn name
-    putStrLn ""
-    withPortaudio . mapM_ playSamples . chunksOf framesPerBuffer .
-    {-
-    toWav "out.wav" .
-    -}
-         map (* 0.5) $
-         concatMap (flip myNote 0.125 . realizeScaleStep (noteNum nC4) mode)
-             myPattern
-         {-
-         zipWith (\a b -> (a + b) / 2)
-             (myNote nEb4 1)
-             (myNote nG4 1) ++
-         zipWith4 (\a b c d -> (a + b + c + d) / 4)
-             (myNote nBb4 1)
-             (myNote nD5 1)
-             (myNote nF5 1)
-             (myNote nAb4 1)
-         -}
+    args <- getArgs
+    chordIs <- case args of
+        [] -> replicateM 4 $ randomRIO (0, length namedHexachords - 1)
+        [chordIStr] -> return $ replicate 4 (read chordIStr - 1)
+        _ -> error "usage"
+    baseline <- chooseBaseline
+    let (chordQs, names) = unzip $ map (namedHexachords !!) chordIs
+        modes = map myChooseMode chordQs
+        voicingLists = zipWith
+            (\bassNote -> calcVoicings bassNote (-24, 36) (3, 14))
+            baseline modes
+    zipWithM_ (\n name -> putStrLn $ show n ++ " " ++ name) baseline names
+    print $ map length voicingLists
+    --voicings <- mapM choiceIO voicingLists
+    voicings <- pickCards voicingLists
+    print voicings
 
-toWav :: String -> Signal -> IO ()
-toWav f floatSamples = putWAVEFile f $
-    WAVE (WAVEHeader 1 sampleRate 32 Nothing) $
-    map (:[]) $ map floatToInt32 floatSamples
-  where
-    floatToInt32 = round . (* 2147483647)
+    playPiano $
+        line (map intToMus baseline) +:+
+        line (map intToMus baseline) +:+
+        line (
+            zipWith (\n v -> chord $ map intToMus (n:v)) baseline voicings
+            ) +:+
+        line (
+            zipWith (\n v -> chord $ map intToMus (n:v)) baseline voicings
+            )

@@ -59,7 +59,7 @@ realizeFreqs !tbl =
       where
         newTblPos = (tblPos + tblAdvance) `mod'` tblSizeF
 
-noteEnvel :: Time -> [Loudness]
+noteEnvel :: Duration -> [Loudness]
 noteEnvel attackHoldDur = sampleLinear
     [ (0, attackUpDur)
     , (1, attackDownDur)
@@ -71,4 +71,4 @@ noteEnvel attackHoldDur = sampleLinear
     attackUpDur = attackDur / 2
     attackDownDur = attackUpDur
     holdDur = attackHoldDur - attackDur
-    fadeDur = 0.25
+    fadeDur = attackDownDur

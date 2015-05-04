@@ -12,6 +12,34 @@ data Note a = Note
 
 type NoteNum = Int
 
+readNoteLtr :: String -> Int
+readNoteLtr "C"  = nC
+readNoteLtr "Db" = nDb
+readNoteLtr "D"  = nD
+readNoteLtr "Eb" = nEb
+readNoteLtr "E"  = nE
+readNoteLtr "F"  = nF
+readNoteLtr "Gb" = nGb
+readNoteLtr "G"  = nG
+readNoteLtr "Ab" = nAb
+readNoteLtr "A"  = nA
+readNoteLtr "Bb" = nBb
+readNoteLtr "B"  = nB
+
+nC, nDb, nD, nEb, nE, nF, nGb, nG, nAb, nA, nBb, nB :: Int
+nC  = 0
+nDb = 1
+nD  = 2
+nEb = 3
+nE  = 4
+nF  = 5
+nGb = 6
+nG  = 7
+nAb = 8
+nA  = 9
+nBb = 10
+nB  = 11
+
 -- | noteNum nC0 = 0
 noteNum :: Note Int -> NoteNum
 noteNum (Note p o n) = p * o + n
