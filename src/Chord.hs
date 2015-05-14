@@ -26,6 +26,14 @@ type ChordQual = [Int]
 -- The Ints will all be positive and strictly monotonically increasing.
 type ModeQual = [Int]
 
+type Mode = [Int]
+
+allInversions :: ModeQual -> [Mode]
+allInversions m = 
+    map (take l) . take l . tails $ cycle m
+  where
+    l = length m
+
 -- | This places the tonic after the smallest interval possible.
 -- For a tie, it prefers big intervals immediately preceding that small one.
 --

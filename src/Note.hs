@@ -25,6 +25,7 @@ readNoteLtr "Ab" = nAb
 readNoteLtr "A"  = nA
 readNoteLtr "Bb" = nBb
 readNoteLtr "B"  = nB
+readNoteLtr _ = error "readNoteLtr: Bad letter."
 
 nC, nDb, nD, nEb, nE, nF, nGb, nG, nAb, nA, nBb, nB :: Int
 nC  = 0
@@ -43,6 +44,12 @@ nB  = 11
 -- | noteNum nC0 = 0
 noteNum :: Note Int -> NoteNum
 noteNum (Note p o n) = p * o + n
+
+-- For conversion to Haskore "Absolute", which weirdly takes low C as 0.
+-- noteAbs nC4 = 12
+noteAbs :: Note Int -> Int
+noteAbs (Note 12 o n) = 12 * (o - 3) + n
+noteAbs _ = error "noteAbs: Requires a 12-note octave."
 
 noteNumFreq :: NoteNum -> Freq
 noteNumFreq n = 440 * 2 ** ((fromIntegral n - 57) / 12)

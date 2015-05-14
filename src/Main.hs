@@ -14,6 +14,7 @@ import System.Random
 import Chord
 import LolHaskore
 import MusCalc
+import Note
 
 {-
 cFromList = id
@@ -45,7 +46,7 @@ noteDistFromChord :: Int -> MyC -> Int
 noteDistFromChord n ns2 = minimum [abs (n - n2) | n2 <- ns2]
 
 chordDist :: MyC -> MyC -> Int
-chordDist ns1 ns2 = sum [noteDistFromChord n ns2 | n <- ns1]
+chordDist ns1 ns2 = sum [noteDistFromChord n ns2 ^ (2 :: Int) | n <- ns1]
 
 pickNextCard :: MyC -> [MyC] -> IO MyC
 -- pickNextCard prev curs = choiceIO $ filter (chordDist) curs
@@ -78,8 +79,11 @@ chooseBaseline = do
     pitch1 <- randomRIO (basePitchMin, basePitchMax)
     (pitch1:) <$> loop lineLen pitch1
 
-intToMus :: Absolute -> Mus
-intToMus = (\x -> note x qn na) . Pitch.fromInt
+absToMus :: Absolute -> Mus
+absToMus x = nAbs x qn
+
+nAbs :: Absolute -> Dur -> Mus
+nAbs x d = note (Pitch.fromInt x) d na
 
 -- In Haskore 0 is low C (C3). This is odd;
 -- logically it should be C0 or middle C (C4).
@@ -89,14 +93,48 @@ showAbs = (\(o, n) -> show n ++ show (o + 3)) . Pitch.fromInt
 padr :: Int -> a -> [a] -> [a]
 padr n c cs = cs ++ replicate (n - length cs) c
 
+myArpeg :: [Int] -> Mus
+myArpeg [n1, n2, n3, n4, n5, n6] = chord
+    [                    nAbs n1 (12 %+ 48)
+    , rest (1 %+ 48) +:+ nAbs n2 (11 %+ 48)
+    , rest (2 %+ 48) +:+ nAbs n3 (10 %+ 48)
+    , rest (3 %+ 48) +:+ nAbs n4 (9 %+ 48)
+    , rest (4 %+ 48) +:+ nAbs n5 (8 %+ 48)
+    , rest (5 %+ 48) +:+ nAbs n6 (7 %+ 48)
+    ]
+    {-
+    [                    nAbs n1 (6 %+ 24)
+    , rest (1 %+ 24) +:+ nAbs n2 (5 %+ 24)
+    , rest (2 %+ 24) +:+ nAbs n3 (4 %+ 24)
+    , rest (3 %+ 24) +:+ nAbs n4 (3 %+ 24)
+    , rest (4 %+ 24) +:+ nAbs n5 (2 %+ 24)
+    , rest (5 %+ 24) +:+ nAbs n6 (1 %+ 24)
+    ]
+    [                    nAbs n1 (6 %+ 48) +:+
+                         nAbs n1 (6 %+ 48)
+    , rest (1 %+ 48) +:+ nAbs n2 (5 %+ 48) +:+
+      rest (1 %+ 48) +:+ nAbs n2 (5 %+ 48) 
+    , rest (2 %+ 48) +:+ nAbs n3 (4 %+ 48) +:+
+      rest (2 %+ 48) +:+ nAbs n3 (4 %+ 48)
+
+    , rest (3 %+ 48) +:+ nAbs n4 (6 %+ 48) +:+
+                         nAbs n4 (3 %+ 48)
+    , rest (4 %+ 48) +:+ nAbs n5 (5 %+ 48) +:+
+      rest (1 %+ 48) +:+ nAbs n5 (2 %+ 48)
+    , rest (5 %+ 48) +:+ nAbs n6 (4 %+ 48) +:+
+      rest (2 %+ 48) +:+ nAbs n6 (1 %+ 48) 
+    ]
+    -}
+myArpeg _ = error "myArpeg: takes 6 notes"
+
 basePitchMin, basePitchMax :: Int
 (basePitchMin, basePitchMax) = basePitchRange
 
 basePitchRange, voicingPitchRange, voicingIntervalRange :: (Int, Int)
 
-basePitchRange = (-18, 6)
+basePitchRange = (noteAbs nGb2, noteAbs nGb3)
 
-voicingPitchRange = (-18, 24)
+voicingPitchRange = (noteAbs nGb2, noteAbs nC5)
 
 voicingIntervalRange = (2, 14)
 
@@ -118,8 +156,9 @@ main = do
     let (chordQs, names) = unzip $ map (namedHexachords !!) chordIs
         modes = map myChooseMode chordQs
         voicingLists = zipWith
-            (\bassNote -> map (bassNote :) <$>
-                calcVoicings bassNote voicingPitchRange voicingIntervalRange)
+            (\bassNote -> map (bassNote :) .
+                concatMap (calcVoicings bassNote voicingPitchRange
+                voicingIntervalRange) . allInversions)
             baseline modes
 
     zipWithM_ (\n name -> putStrLn $ padr 3 ' ' (showAbs n) ++ " " ++ name)
@@ -132,6 +171,9 @@ main = do
         map (intercalate " " . map (padr 3 ' ' . showAbs)) voicings
 
     playPiano $
-        line (map intToMus baseline) +:+
-        line (map intToMus baseline) +:+
-        line (map (chord . map intToMus) voicings)
+        line (map absToMus baseline) +:+
+        line (map absToMus baseline) +:+
+        line (map myArpeg voicings) +:+
+        line (map absToMus baseline) +:+
+        line (map (flip nAbs hn) $ take 1 baseline)
+        --line (map (chord . map absToMus) voicings)

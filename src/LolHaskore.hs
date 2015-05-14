@@ -4,8 +4,8 @@ module LolHaskore
     , module Haskore.Music
     , Absolute
     , Relative
-    , note
     , na
+    , note
     ) where
 
 import Haskore.Basic.Duration hiding (T)
