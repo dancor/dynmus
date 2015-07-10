@@ -12,8 +12,10 @@ import System.Environment
 import System.Random
 
 import Chord
+import Hexachord
 import LolHaskore
 import MusCalc
+import Named
 import Note
 
 {-
@@ -152,17 +154,17 @@ main = do
     setStdGen $ mkStdGen seed
 
     baseline <- chooseBaseline
-    chordIs <- replicateM 4 $ randomRIO (0, length namedHexachords - 1)
-    let (chordQs, names) = unzip $ map (namedHexachords !!) chordIs
-        modes = map myChooseMode chordQs
+    chordIs <- replicateM 4 $ randomRIO (0, length goodHexachords - 1)
+    let namedModeQs = map (goodHexachords !!) chordIs
+        modeQs = map unName namedModeQs
         voicingLists = zipWith
             (\bassNote -> map (bassNote :) .
                 concatMap (calcVoicings bassNote voicingPitchRange
-                voicingIntervalRange) . allInversions)
-            baseline modes
+                voicingIntervalRange) . mqInversions)
+            baseline modeQs
 
     zipWithM_ (\n name -> putStrLn $ padr 3 ' ' (showAbs n) ++ " " ++ name)
-        baseline names
+        baseline (map getName namedModeQs)
     putStrLn $ "Voicing options: " ++ show (map length voicingLists)
     --voicings <- mapM choiceIO voicingLists
     voicings <- pickCards $ concat $ replicate 4 voicingLists

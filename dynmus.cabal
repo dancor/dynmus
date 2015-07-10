@@ -20,6 +20,7 @@ executable dynmus
   extra-libraries:  portaudio
   build-depends:
       base
+    , containers
     , haskore
     , MissingH
     , mtl
@@ -39,8 +40,10 @@ test-suite test
   type:             exitcode-stdio-1.0
   build-depends:
       base
+    , containers
     , haskore
     , process
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , vector
