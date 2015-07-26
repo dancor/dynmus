@@ -1,66 +1,66 @@
-Cnamnam C D F G Bb
-Cneme   C D E G Bb
-Cmanme  C Eb F Ab B
-Cmenam  C Eb Gb Ab B
-Cmaner  C Eb F G B
-Cnir    C D E Gb Bb
-Cnamnar C D F G B
-Cranem  C E Gb Ab B
-Cnami   C D F Ab B
-Cmetar  C Eb Gb G B
-Cmin    C Eb Gb A B
-Cranman C E Gb A B
-Cmanran C Eb F A B
-Cnemar  C D E G B
-Cnarnam C D Gb Ab B
-Cmatmar C Eb E G B
-Cratnar C E F G B
-Cmatram C Eb E Ab B
-Crantar C E Gb G B
-Cneram  C D E Ab B
-Cramne  C E G A B
-Cmarne  C Eb G A B
-Cnamran C D F A B
-Cnamtal C D F Gb B
-Cnil    C D E Gb B
-Cnarman C D Gb A B
-Cmantal C Eb F Gb B
-Ctamer  C Db E G B
-Ctranar C Db F G B
-Cmatnal C Eb E Gb B
-Ctamnal C Db E Gb B
-Clantam C F G Ab B
-Clani   C F G A B
-Ctrame  C Db F Ab B
-Cneln   C D E A B
-Ctratal C Db F Gb B
-Ctamram C Db E Ab B
-Cnatre  C D Eb G B
-Cnalne  C D G A B
-Cratel  C E F Gb B
-Cnatmal C D Eb Gb B
-Ctanmal C Db Eb Gb B
-Ctanre  C Db Eb G B
-Ctalnam C Db Gb Ab B
-Cnatlam C D Eb Ab B
-Ctaren  C Db F A B
-Cnetaj  C D E F B
-Ctamtaj C Db E F B
-Ctamlan C Db E A B
-Ctanej  C Db Eb F B
-Ctanlam C Db Eb Ab B
-Ctalman C Db Gb A B
-Cnatnaj C D Eb F B
-Cmatej  C Eb E F B
-Cnatjan C D Eb A B
-Cteral  C Db D Gb B
-Ctajne  C Db G A B
-Ctanjan C Db Eb A B
-Ctemaj  C Db D F B
-Ctelar  C Db D G B
-Ctantak C Db Eb E B
-Ctejam  C Db D Ab B
-Cnatek  C D Eb E B
-Ctenak  C Db D E B
-Ctekan  C Db D A B
-Ctif    C Db D Eb B
+Cnamnam 23232 C D F G Bb
+Cneme   22332 C D E G Bb
+Cnir    22242 C D E Gb Bb
+Cmanme  32331 C Eb F Ab B
+Cmenam  33231 C Eb Gb Ab B
+Cnami   23331 C D F Ab B
+Cmin    33321 C Eb Gb A B
+Cnamnar 23241 C D F G B
+Cranman 42321 C E Gb A B
+Cmaner  32241 C Eb F G B
+Cranem  42231 C E Gb Ab B
+Cnarnam 24231 C D Gb Ab B
+Cmanran 32421 C Eb F A B
+Cnemar  22341 C D E G B
+Cramne  43221 C E G A B
+Cnamran 23421 C D F A B
+Cnarman 24321 C D Gb A B
+Cneram  22431 C D E Ab B
+Cmarne  34221 C Eb G A B
+Cnil    22251 C D E Gb B
+Clani   52221 C F G A B
+Cneln   22521 C D E A B
+Cnalne  25221 C D G A B
+Cmetar  33141 C Eb Gb G B
+Cmatmar 31341 C Eb E G B
+Cmatram 31431 C Eb E Ab B
+Ctamer  13341 C Db E G B
+Ctrame  14331 C Db F Ab B
+Ctamram 13431 C Db E Ab B
+Cnamtal 23151 C D F Gb B
+Cmantal 32151 C Eb F Gb B
+Cratnar 41241 C E F G B
+Crantar 42141 C E Gb G B
+Ctamnal 13251 C Db E Gb B
+Ctalnam 15231 C Db Gb Ab B
+Ctranar 14241 C Db F G B
+Cmatnal 31251 C Eb E Gb B
+Clantam 52131 C F G Ab B
+Ctanmal 12351 C Db Eb Gb B
+Ctalman 15321 C Db Gb A B
+Cnatmal 21351 C D Eb Gb B
+Cnatlam 21531 C D Eb Ab B
+Cnatre  21441 C D Eb G B
+Ctanre  12441 C Db Eb G B
+Ctaren  14421 C Db F A B
+Ctanlam 12531 C Db Eb Ab B
+Ctamlan 13521 C Db E A B
+Cnetaj  22161 C D E F B
+Ctanej  12261 C Db Eb F B
+Ctajne  16221 C Db G A B
+Cnatnaj 21261 C D Eb F B
+Cnatjan 21621 C D Eb A B
+Ctanjan 12621 C Db Eb A B
+Ctratal 14151 C Db F Gb B
+Cratel  41151 C E F Gb B
+Ctamtaj 13161 C Db E F B
+Cmatej  31161 C Eb E F B
+Ctemaj  11361 C Db D F B
+Ctejam  11631 C Db D Ab B
+Cteral  11451 C Db D Gb B
+Ctelar  11541 C Db D G B
+Ctantak 12171 C Db Eb E B
+Cnatek  21171 C D Eb E B
+Ctenak  11271 C Db D E B
+Ctekan  11721 C Db D A B
+Ctif    11181 C Db D Eb B

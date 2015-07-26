@@ -5,28 +5,30 @@ import Chord
 import Named
 import Util
 
-regularity :: ModeQ -> Ratio Int
-regularity mq@(ModeQ v) = sum . map invScore $ mqInversions mq
+type Regularity = [Ratio Int]
+
+invScore :: Vec.Vector Int -> Regularity
+invScore v = zipWith (\x y -> abs (x - fromIntegral y))
+    (iterate (* regIntvl) regIntvl) . Vec.toList $ Vec.scanl1 (*) v
   where
     regIntvl :: Ratio Int
     regIntvl = 12 % Vec.length v
-    invScore :: Vec.Vector Int -> Ratio Int
-    invScore = sum . zipWith (\x y -> abs $ x - fromIntegral y)
-        (iterate (* regIntvl) regIntvl) . Vec.toList . Vec.scanl1 (*)
+
+regularity :: ModeQ -> Regularity
+regularity (ModeQ v) = map sum . transpose . map invScore $ vRotPoss v
+--regularity mq@(ModeQ v) = invScore v
 
 main :: IO ()
-main = putStr $ unlines chords5
+main = putStr . unlines $ chords 5 7
+--main = putStr . unlines $ chords 6 9
 
-chords6 :: [String]
-chords6 =
-    map (\(Named n x) ->
-        padr 9 ' ' n <> " " <> intercalate " " (map show $ Set.toList x)) $
-    map (`nmqAtCl` (Cl 0)) . sortBy (compare `on` regularity . unName) $
-    genNChords 6
-
-chords5 :: [String]
-chords5 =
-    map (\(Named n x) ->
-        padr 7 ' ' n <> " " <> intercalate " " (map show $ Set.toList x)) $
-    map (`nmqAtCl` (Cl 0)) . sortBy (compare `on` regularity . unName) $
-    genNChords 5
+chords :: Int -> Int -> [String]
+chords noteNum padNum =
+    map (\((r, ModeQ x), Named n y) ->
+        padr padNum ' ' n <> " " <> concatMap show (Vec.toList x) <> " " <>
+        -- show (map realToFrac r) <> " " <>
+        intercalate " " (map show $ Set.toList y)) .
+    sortBy (compare `on` fst . fst) .
+    map (first (\x -> (regularity x, x))) .
+    map (\x -> (unName x, nmqAtCl x (Cl 0))) $
+    genNChords noteNum
