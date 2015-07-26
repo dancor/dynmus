@@ -5,3 +5,5 @@ data Named a = Named
     , unName :: a
     }
 
+instance Show a => Show (Named a) where
+    show (Named x y) = x ++ ": " ++ show y
