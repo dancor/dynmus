@@ -4,18 +4,13 @@ import Data.Monoid
 import qualified Data.Vector as Vec
 
 import LolHaskore
+import Util
 
 -- type MyC = V.Vector Int
 type MyC = [Int]
 
 myCEmpty :: MyC
 myCEmpty = []
-
-pullEachElem :: Vec.Vector Int -> [(Int, Vec.Vector Int)]
-pullEachElem v =
-    [ (v Vec.! i, Vec.take i v <> Vec.drop (i + 1) v)
-    | i <- [0 .. Vec.length v - 1]
-    ]
 
 -- n + 12 * o >= lowestNoteAllowed2
 -- o >= ceil ((lowestNoteAllowed2 - n) / 12)

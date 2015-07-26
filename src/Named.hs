@@ -6,4 +6,6 @@ data Named a = Named
     }
 
 instance Show a => Show (Named a) where
-    show (Named x y) = x ++ ": " ++ show y
+    show (Named n x) = n ++ ": " ++ show x
+
+onNamed f (Named n x) = Named n $ f x

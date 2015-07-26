@@ -22,6 +22,7 @@ import Haskore.Basic.Pitch
 import qualified Data.Vector as Vec
 
 import Named
+import Util
 
 -- | A chord is a set of notes.
 type Chord = Set.Set Int
@@ -156,6 +157,16 @@ genNChords n = map (\x -> Named (nameMq x) x) . nub . sort $
         [ map (intvl :) $ grow maxIntvl (notesLeft - 1) (stonesLeft - intvl)
         | intvl <- [1 .. maxIntvl]
         ]
+
+diffsToAsc :: Vec.Vector Int -> Vec.Vector Int
+diffsToAsc = Vec.init . Vec.scanl (+) 0
+
+ascToDiffs :: Vec.Vector Int -> Vec.Vector Int
+ascToDiffs v = Vec.zipWith (-) (Vec.snoc (Vec.tail v) (12 + Vec.head v)) v
+
+subchords :: ModeQ -> [ModeQ]
+subchords (ModeQ v) =
+    map (ModeQ . ascToDiffs . snd) . pullEachElem $ diffsToAsc v
 
 {-
 trichords :: [Named ModeQ]
