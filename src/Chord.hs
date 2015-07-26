@@ -1,14 +1,18 @@
 module Chord
+{-
   ( Chord
   , ChordQ
   , cqInversions
   , ltChooseMode
-  , ModeQ
+  , ModeQ (..)
   , mqOrd
   , mqFromAdjIvls
   , mqInversions
   , normalizeCq
-  ) where
+  , vRotPoss
+  )
+  -}
+  where
 
 import Control.Exception
 import Data.Function
@@ -54,6 +58,11 @@ data ChordQ = ChordQ
 data ModeQ = ModeQ
     { unMQ :: !(Vec.Vector Relative)
     }
+
+type Mode = Vec.Vector Relative
+
+formMode :: Relative -> ModeQ -> Mode
+formMode n = Vec.map ((`mod` 12) . (n +)) . unMQ
 
 mqFromAdjIvls :: [Relative] -> ModeQ
 mqFromAdjIvls rs =

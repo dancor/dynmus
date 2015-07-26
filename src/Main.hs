@@ -98,12 +98,21 @@ padr n c cs = cs ++ replicate (n - length cs) c
 myArpeg :: [Int] -> Mus
 myArpeg [n1, n2, n3, n4, n5, n6] = chord
     [                    nAbs n1 (12 %+ 48)
+    , rest (0 %+ 48) +:+ nAbs n2 (12 %+ 48)
+    , rest (0 %+ 48) +:+ nAbs n3 (12 %+ 48)
+    , rest (0 %+ 48) +:+ nAbs n4 (12 %+ 48)
+    , rest (0 %+ 48) +:+ nAbs n5 (12 %+ 48)
+    , rest (0 %+ 48) +:+ nAbs n6 (12 %+ 48)
+    ]
+    {- arpeggio
+    [                    nAbs n1 (12 %+ 48)
     , rest (1 %+ 48) +:+ nAbs n2 (11 %+ 48)
     , rest (2 %+ 48) +:+ nAbs n3 (10 %+ 48)
     , rest (3 %+ 48) +:+ nAbs n4 (9 %+ 48)
     , rest (4 %+ 48) +:+ nAbs n5 (8 %+ 48)
     , rest (5 %+ 48) +:+ nAbs n6 (7 %+ 48)
     ]
+    -}
     {-
     [                    nAbs n1 (6 %+ 24)
     , rest (1 %+ 24) +:+ nAbs n2 (5 %+ 24)
