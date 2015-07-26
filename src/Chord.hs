@@ -17,10 +17,12 @@ module Chord
 import Control.Exception
 import Data.Function
 import Data.List
+import Data.Monoid
 import qualified Data.Set as Set
 import Haskore.Basic.Pitch
 import qualified Data.Vector as Vec
 
+import Cl
 import Named
 import Util
 
@@ -132,6 +134,8 @@ nameMq (ModeQ v) =
           _ -> error "doLetters: vowel"
     doLetters [] = error "doLetters: []"
 
+    condense [c1, 'a'] = ['a', c1]
+    condense ('t':'a':'r':'a':rest) = 't' : condense ('r':'a':rest)
     condense (c1:v1:'n':'a':'t':'a':rest) = c1 : v1 : 'n' : 't' : condense rest
     condense (c1:v1:'r':'a':'t':'a':rest) = c1 : v1 : 'r' : 't' : condense rest
     condense (c1:v1:'r':'a':'n':'a':rest) = c1 : v1 : 'r' : 'n' : condense rest
@@ -192,3 +196,8 @@ trichords =
     , ([1,1], "chromatic 3")
     ]
     -}
+
+nmqAtCl :: Named ModeQ -> Cl -> Named ClSet
+nmqAtCl (Named n mq) c = Named (showCl c <> n) . Set.fromList .
+    map (Cl . (`mod` 12)) . scanl (+) (unCl c) . map fromIntegral .
+    Vec.toList $ unMQ mq

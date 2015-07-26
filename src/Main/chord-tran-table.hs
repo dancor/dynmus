@@ -15,9 +15,9 @@ import Safe
 import System.Environment
 
 import Chord
+import Cl
 import Hexachord
 import Named
-import Cl
 
 data TranStats = TranStats
     { tSharedNoteNum :: Int
@@ -38,11 +38,6 @@ statsForTran :: ClSet -> ClSet -> TranStats
 statsForTran a b = TranStats
     (Set.size $ Set.intersection a b)
     (clSetTranDist a b)
-
-nmqAtCl :: Named ModeQ -> Cl -> Named ClSet
-nmqAtCl (Named n mq) c = Named (showCl c <> n) . Set.fromList .
-    map (Cl . (`mod` 12)) . scanl (+) (unCl c) . map fromIntegral .
-    Vec.toList $ unMQ mq
 
 ctt :: String -> [(Named ClSet, TranStats)]
 ctt arg = map (\x -> (x, statsForTran start $ unName x))

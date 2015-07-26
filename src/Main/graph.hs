@@ -19,6 +19,7 @@ import Safe
 import Chord
 import Hexachord
 import Named
+import Util
 
 theChords :: [Named ModeQ]
 theChords =
@@ -106,9 +107,6 @@ myParams = nonClusteredParams
     }
   where
     clFmt m = [GraphAttrs [toLabel $ "Degree " ++ show m]]
-
-padr :: Int -> a -> [a] -> [a]
-padr n c cs = cs ++ replicate (n - length cs) c
 
 {-
 evenOdd :: (Graph gr, Ord el) => gr Int el -> DotGraph Node

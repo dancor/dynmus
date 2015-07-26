@@ -45,5 +45,8 @@ showCl (Cl 10) = "Bb"
 showCl (Cl 11) = "B"
 showCl (Cl i) = error $ "showCl: out of range:" ++ show i
 
+instance Show Cl where
+    show = showCl
+
 clInt :: Cl -> Int
 clInt (Cl c) = fromIntegral c
