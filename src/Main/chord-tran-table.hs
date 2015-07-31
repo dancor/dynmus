@@ -26,6 +26,8 @@ data TranStats = TranStats
 
 theNmqs :: [Named ModeQ]
 theNmqs =
+    hexachords
+{-
     [ Named "mano"  cMano
     , Named "namni" cNamni
     , Named "nemne" cNemne
@@ -33,6 +35,7 @@ theNmqs =
     , Named "nom"   cNom
     -- , Named "nu"    cNu
     ]
+    -}
 
 statsForTran :: ClSet -> ClSet -> TranStats
 statsForTran a b = TranStats
@@ -49,10 +52,11 @@ ctt arg = map (\x -> (x, statsForTran start $ unName x))
 main :: IO ()
 main = do
     [arg] <- getArgs
-    mapM_ putStrLn $ map
+    mapM_ putStrLn . map
         (\(Named n _, TranStats s d) ->
             n <> "\t" <> show s <> "\t" <> show d
-        ) $
+        ) . 
+        filter (\(_, TranStats s d) -> s + d /= 6) .
         sortBy (
             (flip compare `on` tSharedNoteNum . snd) <>
             (compare `on` tDist . snd)) $

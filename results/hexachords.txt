@@ -39,7 +39,7 @@ Ctanmatar 123141 C Db Eb Gb G B
 Cmanter   321141 C Eb F Gb G B
 Ctanetal  122151 C Db Eb F Gb B
 Cnetel    221151 C D E F Gb B
-Cnatnatal 212151 C D Eb F Gb B
+Cnatnatl  212151 C D Eb F Gb B
 Ctamtanar 131241 C Db E F G B
 Ctrantam  142131 C Db F G Ab B
 Cmatenar  311241 C Eb E F G B
