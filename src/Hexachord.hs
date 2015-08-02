@@ -30,7 +30,6 @@ cTinaj, cTire, cTok, cTrani, cTrantam, cTrater                       :: ModeQ
 -- 4: 13
 -- 5:  1
 
-
 -- - Zero 1's:
 cNu = mq6 2 2 2 2 2 2
 

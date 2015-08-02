@@ -24,10 +24,10 @@ data TranStats = TranStats
     , tDist :: Int
     }
 
+-- Need a way to only consider the 2 distinct nu scales; there aren't 12.
 theNmqs :: [Named ModeQ]
 theNmqs =
-    hexachords
-{-
+    --hexachords
     [ Named "mano"  cMano
     , Named "namni" cNamni
     , Named "nemne" cNemne
@@ -35,7 +35,6 @@ theNmqs =
     , Named "nom"   cNom
     -- , Named "nu"    cNu
     ]
-    -}
 
 statsForTran :: ClSet -> ClSet -> TranStats
 statsForTran a b = TranStats
@@ -56,8 +55,10 @@ main = do
         (\(Named n _, TranStats s d) ->
             n <> "\t" <> show s <> "\t" <> show d
         ) . 
-        filter (\(_, TranStats s d) -> s + d /= 6) .
+        -- filter (\(_, TranStats s d) -> s + d /= 6) .
         sortBy (
-            (flip compare `on` tSharedNoteNum . snd) <>
-            (compare `on` tDist . snd)) $
+            (compare `on` tDist . snd)
+            <>
+            (flip compare `on` tSharedNoteNum . snd)
+            ) $
         ctt arg

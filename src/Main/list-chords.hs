@@ -14,8 +14,12 @@ invScore v = zipWith (\x y -> abs (x - fromIntegral y))
     regIntvl :: Ratio Int
     regIntvl = 12 % Vec.length v
 
-regularity :: ModeQ -> Regularity
-regularity (ModeQ v) = map sum . transpose . map invScore $ vRotPoss v
+regularity :: ModeQ -> Irregularity
+regularity (ModeQ v) = (unders, overs, unevenness) where
+    vDiff = Vec.map ((subtract regInvtl) . fromIntegral) v
+    unders = Vec.sort $ Vec.filter (< 0) vDiff
+    overs = Vec.sort $ Vec.filter (> 0) vDiff
+    -- map sum . transpose . map invScore $ vRotPoss v
 --regularity mq@(ModeQ v) = invScore v
 
 main :: IO ()

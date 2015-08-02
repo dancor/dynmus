@@ -3,6 +3,7 @@
 module Cl where
 
 import qualified Data.Set as Set
+import Data.List
 import Data.Word
 import Haskore.Basic.Pitch
 import Safe
@@ -22,10 +23,17 @@ clSetDist :: Cl -> ClSet -> Relative
 clSetDist c =
     fst . fromJustNote "clToClSetDist" . Set.minView . Set.map (clDist c)
 
+{-
 -- The transition difference is how many semitones the notes of the first
 -- chord have to move to end up somewhere in the second chord.
 clSetTranDist :: ClSet -> ClSet -> Relative
 clSetTranDist a b = sum . map (flip clSetDist b) $ Set.toList a
+-}
+-- The sum of the minimum distances the notes would have to move to remain
+-- as six voices. Now: clSetTranDist a b == clSetTranDist b a
+clSetTranDist :: ClSet -> ClSet -> Relative
+clSetTranDist a = minimum . map (sum . zipWith clDist (Set.toList a)) .
+    permutations . Set.toList 
 
 clAdd :: Cl -> Word8 -> Cl
 clAdd (Cl a) b = Cl $ (a + b) `mod` 12
