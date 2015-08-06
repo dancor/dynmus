@@ -12,7 +12,12 @@ source-repository head
   type: git
   location: https://github.com/dancor/dynmus
 
+flag dynmus
+  default: False
+
 executable dynmus
+  if !flag(dynmus)
+      buildable: False
   hs-source-dirs:   src
   main-is:          Main.hs
   ghc-options:      -Wall -O2 -threaded
@@ -33,6 +38,39 @@ executable dynmus
     -- , tomato-rubato-openal
     , vector
     , WAVE
+
+flag list-chords
+  default: False
+
+executable list-chords
+  if !flag(list-chords)
+      buildable: False
+  hs-source-dirs:   src
+  main-is:          Main/list-chords.hs
+  ghc-options:      -Wall -O3
+  build-depends:
+      base
+    , containers
+    , haskore
+    , safe
+    , vector
+
+flag tran-table
+  default: False
+
+executable tran-table
+  if !flag(tran-table)
+      buildable: False
+  hs-source-dirs:   src
+  main-is:          Main/tran-table.hs
+  ghc-options:      -Wall -O3
+  build-depends:
+      base
+    , containers
+    , haskore
+    , safe
+    , text
+    , vector
 
 test-suite test
   hs-source-dirs:   src

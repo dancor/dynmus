@@ -12,6 +12,9 @@ data Cl = Cl
     { unCl :: {-# UNPACK #-} !Word8
     } deriving (Eq, Ord)
 
+allCls :: [Cl]
+allCls = [Cl i | i <- [0 .. 11]]
+
 type ClSet = Set.Set Cl
 
 clDist :: Cl -> Cl -> Relative
@@ -58,3 +61,6 @@ instance Show Cl where
 
 clInt :: Cl -> Int
 clInt (Cl c) = fromIntegral c
+
+intCl :: Int -> Cl
+intCl = Cl . fromIntegral . (`mod` 12)

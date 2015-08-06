@@ -17,14 +17,14 @@ module Chord
 import Control.Exception
 import Data.Function
 import Data.List
-import Data.Monoid
 import qualified Data.Set as Set
 import Haskore.Basic.Pitch
 import qualified Data.Vector as Vec
 
-import Cl
 import Named
 import Util
+
+type Cl = Class
 
 -- | A chord is a set of notes.
 type Chord = Set.Set Int
@@ -62,10 +62,28 @@ data ModeQ = ModeQ
     { unMQ :: !(Vec.Vector Relative)
     } deriving (Eq, Ord, Show)
 
-type Mode = Vec.Vector Relative
+type Mode = Vec.Vector Cl
 
-formMode :: Relative -> ModeQ -> Mode
-formMode n = Vec.map ((`mod` 12) . (n +)) . unMQ
+intToClass :: Int -> Cl
+intToClass = go . (`mod` 12)
+  where
+    go 0 = C
+    go 1 = Cs
+    go 2 = D
+    go 3 = Ds
+    go 4 = E
+    go 5 = F
+    go 6 = Fs
+    go 7 = G
+    go 8 = Gs
+    go 9 = A
+    go 10 = As
+    go 11 = B
+    go _ = error "intToClass: impossible"
+
+modeAt :: ModeQ -> Cl -> Mode
+modeAt mq cl =
+    Vec.map intToClass . Vec.init . Vec.scanl (+) (classToInt cl) $ unMQ mq
 
 mqFromAdjIvls :: [Relative] -> ModeQ
 mqFromAdjIvls rs =
@@ -195,9 +213,9 @@ trichords =
     , ([1,2], "major scale 7-2")
     , ([1,1], "chromatic 3")
     ]
-    -}
 
 nmqAtCl :: Named ModeQ -> Cl -> Named ClSet
 nmqAtCl (Named n mq) c = Named (showCl c <> n) . Set.fromList .
     map (Cl . (`mod` 12)) . scanl (+) (unCl c) . map fromIntegral .
     Vec.toList $ unMQ mq
+    -}
