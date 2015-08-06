@@ -26,7 +26,7 @@ type TranStats = (Int, Int)
 data Rank = Low | Medium | High deriving (Eq, Ord)
 
 data MyMode = MyMode
-    { _mCl   :: !Cl
+    { mCl   :: !Cl
     , mNum  :: !Int
     , _mName :: !String
     , mMode :: !Mode
@@ -77,23 +77,31 @@ statsForTran a b =
     , clSetTranDist a b
     )
 
-calcTran :: MyMode -> MyMode -> ((Int, Int), TranStats)
+calcTran :: MyMode -> MyMode -> ((Int, Int), (TranStats, Cl))
 calcTran a b =
     ( (mNum a, mNum b)
-    , statsForTran
-      (Set.fromList . Vec.toList $ mMode a)
-      (Set.fromList . Vec.toList $ mMode b)
+    , ( statsForTran
+        (Set.fromList . Vec.toList $ mMode a)
+        (Set.fromList . Vec.toList $ mMode b)
+      , mCl b
+      )
     )
 
 main :: IO ()
 main = do
     let maxI = Vec.length allModes - 1
-    putStr . unlines $ intercalate [""]
-        [ map show $ sortBy (compare `on` snd)
-          [ calcTran (allModes Vec.! i) (allModes Vec.! j)
+    -- putStr . unlines . map show . sortBy (compare `on` snd) $ concat
+    putStr . unlines . map show . filter ((== (3, 4)) . fst . snd) $ concat
+        [ map (\xs@((x1,(x2,_)):_) -> (x1, (x2, map (snd . snd) xs))) .
+          groupBy (\(x1,(x2,_)) (y1,(y2,_)) -> x1 == y1 && x2 == y2) $
+          sortBy (compare `on` snd)
+          [ calcTran a b
           | j <- [i + 1 .. maxI]
+          , let b = allModes Vec.! j
           ]
         | i <- [0 .. maxI]
+        , let a = allModes Vec.! i
+        , mCl a == C
         ]
 
 {-
