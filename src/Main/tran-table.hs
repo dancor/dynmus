@@ -2,11 +2,13 @@
 
 import Data.Function
 import Data.List
+import Data.Monoid
 import qualified Data.Set as Set
 --import qualified Data.Text.Lazy as DTL
 --import qualified Data.Text.Lazy.IO as DTLI
 import qualified Data.Vector as Vec
 import Haskore.Basic.Pitch
+import Text.Printf
 
 import Chord
 --import Cl
@@ -28,7 +30,7 @@ data Rank = Low | Medium | High deriving (Eq, Ord)
 data MyMode = MyMode
     { mCl   :: !Cl
     , mNum  :: !Int
-    , _mName :: !String
+    , mName :: !String
     , mMode :: !Mode
     , _mRank :: !Rank
     }
@@ -77,7 +79,7 @@ statsForTran a b =
     , clSetTranDist a b
     )
 
-calcTran :: MyMode -> MyMode -> ((Int, Int), (TranStats, Cl))
+calcTran :: (Cl, Nnmq) -> (Cl, Nnmq) -> ((Int, Int), (TranStats, Cl))
 calcTran a b =
     ( (mNum a, mNum b)
     , ( statsForTran
@@ -87,22 +89,52 @@ calcTran a b =
       )
     )
 
+hexColor :: Int -> Int -> Int -> String
+hexColor r g b = '#' : printf "%02x%02x%02x" r g b
+
 main :: IO ()
 main = do
     let maxI = Vec.length allModes - 1
+        trans =
+            filter ((== (3, 4)) . fst . snd) $ concat
+            [ map (\xs@((x1,(x2,_)):_) -> (x1, (x2, map (snd . snd) xs))) .
+              groupBy (\(x1,(x2,_)) (y1,(y2,_)) -> x1 == y1 && x2 == y2) $
+              sortBy ((compare `on` fst . snd) `mappend` (compare `on` fst))
+              [ calcTran a b
+              | j <- [i + 1 .. maxI]
+              , let b = allModes Vec.! j
+              ]
+            | i <- [0 .. maxI]
+            , let a = allModes Vec.! i
+            , mCl a == C
+            ]
     -- putStr . unlines . map show . sortBy (compare `on` snd) $ concat
-    putStr . unlines . map show . filter ((== (3, 4)) . fst . snd) $ concat
-        [ map (\xs@((x1,(x2,_)):_) -> (x1, (x2, map (snd . snd) xs))) .
-          groupBy (\(x1,(x2,_)) (y1,(y2,_)) -> x1 == y1 && x2 == y2) $
-          sortBy (compare `on` snd)
-          [ calcTran a b
-          | j <- [i + 1 .. maxI]
-          , let b = allModes Vec.! j
-          ]
-        | i <- [0 .. maxI]
-        , let a = allModes Vec.! i
-        , mCl a == C
-        ]
+    putStrLn "digraph lol {"
+    putStrLn "    node [shape=plaintext];"
+    putStr . unlines . map (\n ->
+        let Named name mq = unNumber $ hexachords !! n
+        in
+        "    " ++ show n ++ " [label=" ++ show name ++
+        -- " fonsize=8" ++
+        " fontcolor=" ++ show (hexColor ((n * 128) `div` 32) 128 0) ++ "];"
+        ) .
+        Set.toList . Set.fromList $ concatMap (\((a,b), _) -> [a,b]) trans
+    putStr . unlines $
+        map (\((a,b),(_,cls)) ->
+            let label = intercalate "," $ map (($ "") . classFormat) cls
+                node = show a ++ "," ++ show b ++ "," ++ label
+            in
+            "    " ++ show node ++ " [label=" ++ show label ++ 
+            " fontsize=8" ++
+            " fontcolor=purple];\n" ++
+            "    " ++ show a ++ " -> " ++ show node ++ " -> " ++ show b ++ ";"
+            --"    " ++ show a ++ " -> " ++ show b ++ " [" ++
+            -- "color=gray fontsize=8 fontcolor=orange labelangle=1 labeldistance=3 headlabel=\"" ++
+            --intercalate "," (map (($ "") . classFormat) cls) ++ "\"];"
+            )
+            trans
+        --map show .
+    putStrLn "}"
 
 {-
 onNn :: (a -> b) -> Numbered (Named a) -> Numbered (Named b)
