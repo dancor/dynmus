@@ -25,7 +25,7 @@ data TranStats = TranStats
 
 type TranStats = (Int, Int)
 
-data Rank = Low | Medium | High deriving (Eq, Ord)
+data Rank = Low | Medium | High deriving (Eq, Ord, Show)
 
 data MyMode = MyMode
     { mCl   :: !Cl
@@ -33,8 +33,7 @@ data MyMode = MyMode
     , mName :: !String
     , mMode :: !Mode
     , _mRank :: !Rank
-    }
-
+    } deriving Show
 
 type ClSet = Set.Set Cl
 
@@ -53,20 +52,20 @@ clSetTranDist a = minimum . map (sum . zipWith clDist (Set.toList a)) .
 
 allModes :: Vec.Vector MyMode
 allModes = Vec.fromList $
-    [ MyMode cl n name (modeAt mq cl) High
-    | Numbered n (Named name mq) <- [cNu]
+    [ makeMyMode cl c
+    | c <- [cNu]
     , cl <- [C, Cs]
     ] ++
-    [ MyMode cl n name (modeAt mq cl) High
-    | Numbered n (Named name mq) <- [cNemne, cNamni, cNiman, cMano, cNom]
+    [ makeMyMode cl c
+    | c <- [cNemne, cNamni, cNiman, cMano, cNom]
     , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
     ] ++
-    [ MyMode cl n name (modeAt mq cl) High
-    | Numbered n (Named name mq) <- [cMantman, cNamtanam]
+    [ makeMyMode cl c
+    | c <- [cMantman, cNamtanam]
     , cl <- [C, Cs, D, Ds, E, F]
     ] ++
-    [ MyMode cl n name (modeAt mq cl) High
-    | Numbered n (Named name mq) <- [cMantnam, cNamnatam, cNatmanam, cManetam,
+    [ makeMyMode cl c
+    | c <- [cMantnam, cNamnatam, cNatmanam, cManetam,
       cMatnem, cNatmen, cNatname, cTamnaman, cTanmanam, cNetme, cTamnem,
       cTanmen, cTamene, cTaneme, cNatnarn, cNatner, cNatrane, cNetnar, cNetran,
       cTanern, cTanrane, cNitar, cTanir, cTrani]
@@ -79,7 +78,11 @@ statsForTran a b =
     , clSetTranDist a b
     )
 
-calcTran :: (Cl, Nnmq) -> (Cl, Nnmq) -> ((Int, Int), (TranStats, Cl))
+makeMyMode :: Cl -> Nnmq -> MyMode
+makeMyMode cl (Numbered n (Named name mq)) =
+    MyMode cl n name (modeAt mq cl) High
+
+calcTran :: MyMode -> MyMode -> ((Int, Int), (TranStats, Cl))
 calcTran a b =
     ( (mNum a, mNum b)
     , ( statsForTran

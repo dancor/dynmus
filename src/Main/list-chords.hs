@@ -117,9 +117,9 @@ chords noteNum padNum =
     --(Named "Maj" (replicate 6 0, [map (12 +) [0, 4, 7, 12, 16, 19]]) :) .
     map (onNamed (\x ->
         ( x
-        -- , allVoicings . take 6 . scanl (+) 0 . Vec.toList $ unMQ x
-        , concatMap (allVoicings . take 6 . scanl (+) 0) . sixCyc .
-          Vec.toList $ unMQ x
+        , allVoicings . take 6 . scanl (+) 0 . Vec.toList $ unMQ x
+        -- , concatMap (allVoicings . take 6 . scanl (+) 0) . sixCyc .
+        --  Vec.toList $ unMQ x
         )
         )) $
     genNChords noteNum
