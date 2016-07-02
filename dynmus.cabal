@@ -26,18 +26,15 @@ executable dynmus
   build-depends:
       base
     , containers
-    , haskore
     , MissingH
     , mtl
     , netwire
     , process
     , random
-    , soundfont
     , split
     , time
     -- , tomato-rubato-openal
     , vector
-    , WAVE
 
 flag list-chords
   default: False
@@ -79,7 +76,6 @@ test-suite test
   build-depends:
       base
     , containers
-    , haskore
     , process
     , tasty
     , tasty-hunit

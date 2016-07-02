@@ -21,10 +21,11 @@ import qualified Data.Set as Set
 import Haskore.Basic.Pitch
 import qualified Data.Vector as Vec
 
+import Cl
 import Named
 import Util
 
-type Cl = Class
+intToClass = Haskore.Basic.Pitch.fromInt
 
 -- | A chord is a set of notes.
 type Chord = Set.Set Int
@@ -64,6 +65,7 @@ data ModeQ = ModeQ
 
 type Mode = Vec.Vector Cl
 
+{-
 intToClass :: Int -> Cl
 intToClass = go . (`mod` 12)
   where
@@ -80,10 +82,11 @@ intToClass = go . (`mod` 12)
     go 10 = As
     go 11 = B
     go _ = error "intToClass: impossible"
+-}
 
 modeAt :: ModeQ -> Cl -> Mode
 modeAt mq cl =
-    Vec.map intToClass . Vec.init . Vec.scanl (+) (classToInt cl) $ unMQ mq
+    Vec.map intToCl . Vec.init . Vec.scanl (+) (clToInt cl) $ unMQ mq
 
 mqFromAdjIvls :: [Relative] -> ModeQ
 mqFromAdjIvls rs =

@@ -11,7 +11,7 @@ import Haskore.Basic.Pitch
 import Text.Printf
 
 import Chord
---import Cl
+import Cl
 import Hexachord
 import Named
 import Numbered
@@ -35,42 +35,42 @@ data MyMode = MyMode
     , _mRank :: !Rank
     } deriving Show
 
-type ClSet = Set.Set Cl
-
-clDist :: Cl -> Cl -> Relative
-clDist a b = min ((aI - bI) `mod` 12) ((bI - aI) `mod` 12)
-  where
-    aI = classToInt a
-    bI = classToInt b
-
--- The sum of the minimum distances the notes would have to move to remain
--- as six voices. Now: clSetTranDist a b == clSetTranDist b a
-clSetTranDist :: ClSet -> ClSet -> Relative
-clSetTranDist a = minimum . map (sum . zipWith clDist (Set.toList a)) .
-    permutations . Set.toList 
-
-
+{-
 allModes :: Vec.Vector MyMode
 allModes = Vec.fromList $
     [ makeMyMode cl c
-    | c <- [cNu]
+    | c <- [hNu]
     , cl <- [C, Cs]
     ] ++
     [ makeMyMode cl c
-    | c <- [cNemne, cNamni, cNiman, cMano, cNom]
+    | c <- [hNemne, hNamni, hNiman, hMano, hNom]
     , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
     ] ++
     [ makeMyMode cl c
-    | c <- [cMantman, cNamtanam]
+    | c <- [hMantman, hNamtanam]
     , cl <- [C, Cs, D, Ds, E, F]
     ] ++
     [ makeMyMode cl c
-    | c <- [cMantnam, cNamnatam, cNatmanam, cManetam,
-      cMatnem, cNatmen, cNatname, cTamnaman, cTanmanam, cNetme, cTamnem,
-      cTanmen, cTamene, cTaneme, cNatnarn, cNatner, cNatrane, cNetnar, cNetran,
-      cTanern, cTanrane, cNitar, cTanir, cTrani]
+    | c <- [hMantnam, hNamnatam, hNatmanam, hManetam,
+      hMatnem, hNatmen, hNatname, hTamnaman, hTanmanam, hNetme, hTamnem,
+      hTanmen, hTamene, hTaneme, hNatnarn, hNatner, hNatrane, hNetnar, hNetran,
+      hTanern, hTanrane, hNitar, hTanir, hTrani]
     , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
     ]
+-}
+
+myModes :: Vec.Vector MyMode
+myModes = Vec.fromList $
+    [ makeMyMode cl c
+    | c <- [hNemne, hNamni, hNiman, hMano, hNom]
+    , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
+    ]
+    {-
+    [ makeMyMode cl h
+    | h <- [hMatnem, hManetam]
+    , cl <- [C]
+    ]
+    -}
 
 statsForTran :: ClSet -> ClSet -> TranStats
 statsForTran a b =
@@ -78,17 +78,19 @@ statsForTran a b =
     , clSetTranDist a b
     )
 
-makeMyMode :: Cl -> Nnmq -> MyMode
-makeMyMode cl (Numbered n (Named name mq)) =
+makeMyMode :: Class -> Nnmq -> MyMode
+makeMyMode cla (Numbered n (Named name mq)) =
     MyMode cl n name (modeAt mq cl) High
+  where
+    cl = intToCl $ classToInt cla
 
-calcTran :: MyMode -> MyMode -> ((Int, Int), (TranStats, Cl))
+calcTran :: MyMode -> MyMode -> ((String, String), (TranStats, Int))
 calcTran a b =
-    ( (mNum a, mNum b)
+    ( (mName a, mName b)
     , ( statsForTran
         (Set.fromList . Vec.toList $ mMode a)
         (Set.fromList . Vec.toList $ mMode b)
-      , mCl b
+      , clToInt $ mCl b
       )
     )
 
@@ -97,50 +99,18 @@ hexColor r g b = '#' : printf "%02x%02x%02x" r g b
 
 main :: IO ()
 main = do
-    let maxI = Vec.length allModes - 1
+    let maxI = Vec.length myModes - 1
         trans =
-            filter ((== (3, 4)) . fst . snd) $ concat
+            concat
             [ map (\xs@((x1,(x2,_)):_) -> (x1, (x2, map (snd . snd) xs))) .
               groupBy (\(x1,(x2,_)) (y1,(y2,_)) -> x1 == y1 && x2 == y2) $
               sortBy ((compare `on` fst . snd) `mappend` (compare `on` fst))
               [ calcTran a b
               | j <- [i + 1 .. maxI]
-              , let b = allModes Vec.! j
+              , let b = myModes Vec.! j
               ]
             | i <- [0 .. maxI]
-            , let a = allModes Vec.! i
-            , mCl a == C
+            , let a = myModes Vec.! i
+            , mCl a == Cl 0
             ]
-    -- putStr . unlines . map show . sortBy (compare `on` snd) $ concat
-    putStrLn "digraph lol {"
-    putStrLn "    node [shape=plaintext];"
-    putStr . unlines . map (\n ->
-        let Named name mq = unNumber $ hexachords !! n
-        in
-        "    " ++ show n ++ " [label=" ++ show name ++
-        -- " fonsize=8" ++
-        " fontcolor=" ++ show (hexColor ((n * 128) `div` 32) 128 0) ++ "];"
-        ) .
-        Set.toList . Set.fromList $ concatMap (\((a,b), _) -> [a,b]) trans
-    putStr . unlines $
-        map (\((a,b),(_,cls)) ->
-            let label = intercalate "," $ map (($ "") . classFormat) cls
-                node = show a ++ "," ++ show b ++ "," ++ label
-            in
-            "    " ++ show node ++ " [label=" ++ show label ++ 
-            " fontsize=8" ++
-            " fontcolor=purple];\n" ++
-            "    " ++ show a ++ " -> " ++ show node ++ " -> " ++ show b ++ ";"
-            --"    " ++ show a ++ " -> " ++ show b ++ " [" ++
-            -- "color=gray fontsize=8 fontcolor=orange labelangle=1 labeldistance=3 headlabel=\"" ++
-            --intercalate "," (map (($ "") . classFormat) cls) ++ "\"];"
-            )
-            trans
-        --map show .
-    putStrLn "}"
-
-{-
-onNn :: (a -> b) -> Numbered (Named a) -> Numbered (Named b)
-onNn f = onNumbered (onNamed f)
--}
-
+    putStr . unlines . map show . sortBy (compare `on` snd) $ trans

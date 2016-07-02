@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 
+import Control.Arrow
 import Data.Function
 import Data.List
 import Data.Monoid
@@ -16,6 +17,25 @@ type Freq = Double
 type Roughness = Double
 
 data AmpFreq = AmpFreq Double Freq
+
+intvlDissonance :: Int -> Int
+intvlDissonance 1 = 100000
+intvlDissonance 6 = 10000
+intvlDissonance 2 = 1000
+intvlDissonance 3 = 100
+intvlDissonance 4 = 10
+intvlDissonance 5 = 1
+{-
+intvlDissonance 1 = 55
+intvlDissonance 2 = 34
+intvlDissonance 3 = 25
+intvlDissonance 4 = 24
+intvlDissonance 5 = 15
+intvlDissonance 6 = 45
+-}
+
+intvlsDissonance :: [Int] -> Int
+intvlsDissonance = sum . map intvlDissonance
 
 myRough :: [Relative] -> Roughness
 myRough = roughness . Vec.concat . map (pianoNote . HBP.intToFreq)
@@ -80,13 +100,13 @@ showNote x = showCl (intCl n) <> show (o + 3)
   where
     (o, n) = x `divMod` 12
 
-pairIntvls :: ModeQ -> [ConsIntvl]
+pairIntvls :: ModeQ -> [Int]
 pairIntvls (ModeQ v) = sortBy (flip compare)
     [diff (w Vec.! i) (w Vec.! j) | i <- [0 .. lastI], j <- [i + 1 .. lastI]]
   where
     w = Vec.scanl1 (+) v
     lastI = Vec.length v - 1
-    diff x y = ConsIntvl $ min ((x - y) `mod` 12) ((y - x) `mod` 12)
+    diff x y = min ((x - y) `mod` 12) ((y - x) `mod` 12)
 
 sixCyc :: [Int] -> [[Int]]
 sixCyc = take 6 . map (take 6) . tails . cycle
@@ -100,6 +120,7 @@ avgAndMin ((x0,a0):rest0) = go x0 1 x0 a0 rest0
       else go (xSum + x) (len + 1) minX minA rest
 avgAndMin _ = error "avgAndMin"
 
+{-
 chords :: Int -> Int -> [String]
 chords noteNum padNum =
     map (\(Named n (chord, (r, v))) -> padr padNum ' ' n <> " " <>
@@ -122,4 +143,16 @@ chords noteNum padNum =
         --  Vec.toList $ unMQ x
         )
         )) $
+    genNChords noteNum
+    -}
+
+chords :: Int -> Int -> [String]
+chords noteNum padNum =
+    map (\(Named n (chord, (intvls, diss))) -> padr padNum ' ' n <> " " <>
+        intercalate " " (map show . Vec.toList $ unMQ chord) <> "  " <>
+        concatMap show (sortBy (flip compare `on` intvlDissonance) intvls) <>
+        "  " <> show diss) .
+    sortBy (compare `on` snd . snd . unName) .
+    map (onNamed (second (\intvls -> (intvls, intvlsDissonance intvls)))) .
+    map (onNamed (\x -> (x, pairIntvls x))) $
     genNChords noteNum
