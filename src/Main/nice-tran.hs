@@ -7,14 +7,14 @@ module Main where
 import Control.Monad.Random
 import Data.Int
 import Data.List
+import Data.Maybe
 import qualified Data.Vector as V
 
 type Note = Int8
 
 showNote :: Note -> String
 showNote n = showPitchClass pitchClass ++ show octave
-  where
-    (octave, pitchClass) = n `quotRem` 12
+  where (octave, pitchClass) = n `quotRem` 12
 
 type Notes = V.Vector Note
 
@@ -88,15 +88,32 @@ vecRandChoice l = do
     return $ l V.! i
 -}
 
+rotPoss :: [a] -> [[a]]
+rotPoss xs = map (take l) . take l . tails $ cycle xs
+  where l = length xs
+
+diffs :: [Int8] -> [Int8]
+diffs xs = map (`mod` 12) $ zipWith (-) (tail xs) xs
+
+notesMode :: Notes -> [Int8]
+notesMode = minimum . map diffs . rotPoss . sort . map (`rem` 12) . V.toList
+
+isGood :: Notes -> Bool
+isGood ns = case notesMode ns of
+    [1,2,2,3,2] -> True
+    _ -> False
+
 -- There are 5^6 - 1 (~16k) ways the notes can move.
 -- Assumes ns has length 6.
 growProgression :: Notes -> IO Notes
 growProgression ns = do
     let f n = getRandomR (max noteC3 (n - 2), min noteB5 (n + 2))
-    V.mapM f ns
+    r <- V.mapM f ns
+    if isGood r then return r else growProgression ns
 
 main :: IO ()
 main = do
-    r <- growProgression $
-        V.fromList [noteC3, noteG3, noteD4, noteA4, noteE5, noteB5]
+    let startChord = V.fromList
+            [noteC3, noteG3, noteD4, noteA4, noteE5, noteB5]
+    r <- growProgression startChord
     putStrLn $ showNotes r
