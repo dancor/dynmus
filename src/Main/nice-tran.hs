@@ -7,8 +7,6 @@ module Main where
 import Control.Monad.Random
 import Data.Int
 import Data.List
-import Data.Maybe
-import qualified Data.Vector as V
 
 type Note = Int8
 
@@ -16,10 +14,10 @@ showNote :: Note -> String
 showNote n = showPitchClass pitchClass ++ show octave
   where (octave, pitchClass) = n `quotRem` 12
 
-type Notes = V.Vector Note
+type Notes = [Note]
 
 showNotes :: Notes -> String
-showNotes = intercalate " " . map showNote . V.toList
+showNotes = intercalate " " . map showNote
 
 showPitchClass :: Int8 -> String
 showPitchClass  0 = " C"
@@ -96,7 +94,7 @@ diffs :: [Int8] -> [Int8]
 diffs xs = map (`mod` 12) $ zipWith (-) (tail xs) xs
 
 notesMode :: Notes -> [Int8]
-notesMode = minimum . map diffs . rotPoss . sort . map (`rem` 12) . V.toList
+notesMode = minimum . map diffs . rotPoss . sort . map (`rem` 12)
 
 isGood :: Notes -> Bool
 isGood ns = case notesMode ns of
@@ -105,15 +103,22 @@ isGood ns = case notesMode ns of
 
 -- There are 5^6 - 1 (~16k) ways the notes can move.
 -- Assumes ns has length 6.
-growProgression :: Notes -> IO Notes
-growProgression ns = do
-    let f n = getRandomR (max noteC3 (n - 2), min noteB5 (n + 2))
-    r <- V.mapM f ns
-    if isGood r then return r else growProgression ns
+growProgression :: Note -> Note -> Notes -> IO [Note]
+growProgression minN maxN ns = do
+    let f n = getRandomR (max minN (n - 2), min maxN (n + 2))
+    r <- mapM f ns
+    if isGood r then return $ sort r else growProgression minN maxN ns
+
+growN :: Int -> (a -> IO a) -> a -> IO [a]
+growN 1 _ xs = return [xs]
+growN d f xs = do
+    cur <- f xs
+    rest <- growN (d - 1) f cur
+    return $ xs:rest
 
 main :: IO ()
 main = do
-    let startChord = V.fromList
-            [noteC3, noteG3, noteD4, noteA4, noteE5, noteB5]
-    r <- growProgression startChord
-    putStrLn $ showNotes r
+    r <- growN 10 (growProgression noteC4 noteB5)
+        [noteC4, noteE4, noteG4, noteB4, noteD5, noteA5]
+        -- [noteC3, noteG3, noteD4, noteA4, noteE5, noteB5]
+    mapM_ (putStrLn . showNotes) r

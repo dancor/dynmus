@@ -93,6 +93,4 @@ executable nice-tran
   ghc-options:      -Wall -O3
   build-depends:
       base
-    , containers
     , MonadRandom
-    , vector
