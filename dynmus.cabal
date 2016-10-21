@@ -81,3 +81,18 @@ test-suite test
     , tasty-hunit
     , tasty-quickcheck
     , vector
+
+flag nice-tran
+  default: False
+
+executable nice-tran
+  if !flag(nice-tran)
+      buildable: False
+  hs-source-dirs:   src
+  main-is:          Main/nice-tran.hs
+  ghc-options:      -Wall -O3
+  build-depends:
+      base
+    , containers
+    , MonadRandom
+    , vector

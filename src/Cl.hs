@@ -30,6 +30,21 @@ instance Show Cl where
     show (Cl 11) = "B"
     show _ = error "Show Cl: out of range"
 
+clFwStr :: Cl -> String
+clFwStr (Cl  0) = "C "
+clFwStr (Cl  1) = "C#"
+clFwStr (Cl  2) = "D "
+clFwStr (Cl  3) = "D#"
+clFwStr (Cl  4) = "E "
+clFwStr (Cl  5) = "F "
+clFwStr (Cl  6) = "F#"
+clFwStr (Cl  7) = "G "
+clFwStr (Cl  8) = "G#"
+clFwStr (Cl  9) = "A "
+clFwStr (Cl 10) = "A#"
+clFwStr (Cl 11) = "B "
+clFwStr _ = error "Show Cl: out of range"
+
 type ClSet = Set.Set Cl
 
 clToInt :: Cl -> Int
@@ -49,6 +64,9 @@ clDist :: Cl -> Cl -> Int
 clDist (Cl a) (Cl b) = min
     ((fromIntegral a - fromIntegral b) `mod` 12)
     ((fromIntegral b - fromIntegral a) `mod` 12)
+
+clMinus :: Cl -> Cl -> Int
+a `clMinus` b = (clToInt a - clToInt b + 5) `mod` 12 - 5
 
 allCls :: [Cl]
 allCls = [Cl i | i <- [0 .. 11]]

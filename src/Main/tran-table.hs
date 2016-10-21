@@ -1,14 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Data.Function
 import Data.List
 import Data.Monoid
-import qualified Data.Set as Set
---import qualified Data.Text.Lazy as DTL
---import qualified Data.Text.Lazy.IO as DTLI
 import qualified Data.Vector as Vec
 import Haskore.Basic.Pitch
-import Text.Printf
+--import Text.Printf
 
 import Chord
 import Cl
@@ -16,26 +12,16 @@ import Hexachord
 import Named
 import Numbered
 
-{-
-data TranStats = TranStats
-    { tChangedNoteNum :: Int
-    , tDist :: Int
-    }
--}
-
-type TranStats = (Int, Int)
-
 data Rank = Low | Medium | High deriving (Eq, Ord, Show)
 
 data MyMode = MyMode
     { mCl   :: !Cl
-    , mNum  :: !Int
+    , _mNum  :: !Int
     , mName :: !String
     , mMode :: !Mode
     , _mRank :: !Rank
     } deriving Show
 
-{-
 allModes :: Vec.Vector MyMode
 allModes = Vec.fromList $
     [ makeMyMode cl c
@@ -57,26 +43,21 @@ allModes = Vec.fromList $
       hTanern, hTanrane, hNitar, hTanir, hTrani]
     , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
     ]
--}
 
+{-
 myModes :: Vec.Vector MyMode
 myModes = Vec.fromList $
     [ makeMyMode cl c
     | c <- [hNemne, hNamni, hNiman, hMano, hNom]
     , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
     ]
-    {-
+-}
+{-
     [ makeMyMode cl h
     | h <- [hMatnem, hManetam]
     , cl <- [C]
     ]
-    -}
-
-statsForTran :: ClSet -> ClSet -> TranStats
-statsForTran a b =
-    ( 6 - Set.size (Set.intersection a b)
-    , clSetTranDist a b
-    )
+-}
 
 makeMyMode :: Class -> Nnmq -> MyMode
 makeMyMode cla (Numbered n (Named name mq)) =
@@ -84,33 +65,76 @@ makeMyMode cla (Numbered n (Named name mq)) =
   where
     cl = intToCl $ classToInt cla
 
-calcTran :: MyMode -> MyMode -> ((String, String), (TranStats, Int))
-calcTran a b =
-    ( (mName a, mName b)
-    , ( statsForTran
-        (Set.fromList . Vec.toList $ mMode a)
-        (Set.fromList . Vec.toList $ mMode b)
-      , clToInt $ mCl b
-      )
-    )
+data TranSmoothness
+  = TranSmoothness
+  { _tSDistSum :: Int
+  , _tSHeldNotes :: Int
+  , _tSDistSqrSum :: Int
+  } deriving Eq
 
+instance Ord TranSmoothness where
+  TranSmoothness d1 h1 s1 `compare` TranSmoothness d2 h2 s2 =
+    case d2 `compare` d1 of
+      LT -> LT
+      GT -> GT
+      EQ -> case h1 `compare` h2 of
+        LT -> LT
+        GT -> GT
+        EQ -> s2 `compare` s1
+
+instance Show TranSmoothness where
+  show (TranSmoothness d h s) =
+    "dist" <> show d <> ",held" <> show h <> ",sqr" <> show s
+
+tranSmoothness :: [Cl] -> [Cl] -> TranSmoothness 
+tranSmoothness a b = TranSmoothness
+    (sum dists)
+    (length . filter id $ zipWith (==) a b)
+    (sum $ map (\x -> x * x) dists)
+  where
+    dists = zipWith clDist a b
+
+showCls :: [Cl] -> String
+showCls = intercalate " " . map clFwStr
+
+calcTran :: MyMode -> MyMode -> [String]
+calcTran a b = if mName a /= mName b || mCl b `clMinus` mCl a >= 0
+    then 
+      [ ""
+      , show (mCl a) <> mName a <> " -> " <> show (mCl b) <> mName b <> ": " <>
+        show maxSmoothness
+      , showCls aList
+      , replicate 17 '-'
+      ] ++
+      map showCls bestTrans
+    else []
+  where
+    maxSmoothness = maximum . map (tranSmoothness aList) $ permutations bList
+    bestTrans = filter ((== maxSmoothness) . tranSmoothness aList) $
+        permutations bList
+    aList = Vec.toList $ mMode a
+    bList = Vec.toList $ mMode b
+
+{-
 hexColor :: Int -> Int -> Int -> String
 hexColor r g b = '#' : printf "%02x%02x%02x" r g b
+-}
 
-main :: IO ()
-main = do
-    let maxI = Vec.length myModes - 1
+goOnModes :: Vec.Vector MyMode -> IO ()
+goOnModes modes = do
+    let maxI = Vec.length modes - 1
         trans =
             concat
-            [ map (\xs@((x1,(x2,_)):_) -> (x1, (x2, map (snd . snd) xs))) .
-              groupBy (\(x1,(x2,_)) (y1,(y2,_)) -> x1 == y1 && x2 == y2) $
-              sortBy ((compare `on` fst . snd) `mappend` (compare `on` fst))
+            [ concat
               [ calcTran a b
               | j <- [i + 1 .. maxI]
-              , let b = myModes Vec.! j
+              , let b = modes Vec.! j
               ]
             | i <- [0 .. maxI]
-            , let a = myModes Vec.! i
+            , let a = modes Vec.! i
             , mCl a == Cl 0
             ]
-    putStr . unlines . map show . sortBy (compare `on` snd) $ trans
+    mapM_ putStrLn trans
+
+main :: IO ()
+main = goOnModes allModes
