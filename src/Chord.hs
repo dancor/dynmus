@@ -1,47 +1,66 @@
+-- Here is an example of the main types:
+--
+-- E3 C4 G4 has the Chord {E3, C4, G4}. This is a set not a list. So exact
+--   duplicate notes (like C4 twice) would never appear. The set
+--   can be seen as canonically ordered from low to high pitches.
+--
+-- E3 C4 G4 and C4 E4 G4 both have the same KeyQ. This is the familiar
+--   "major" key-quality. It can be represented as 
+--   [M3, m3, P4] or [m3, P4, M3] or [M4, M3, m3];
+--   that is, the cycle of the pitch class differences starting at any point.
+--
+-- E3 C4 G4 has the ModeQ [m3, P4, M3]; that is: E to G, G to C, C to E.
+--   This fixes "m3" (from the first pitch-class E to the next pitch-class up,
+--   which is G here)
+--   as the "first" pitch-class difference in the mode-quality.
+
+-- This library mostly tries to describe useful abstractions of note
+-- collections. Beyond that, the main prescriptive thing this library does is
+-- to decide a canonical mode for any nonempty collection of notes, as the one
+-- that has the best
+-- "leading tone" behavior ("leading" up to the root note from below),
+-- as described in the function keyQToModeQ.
+
 module Chord
-{-
-  ( Chord
-  , ChordQ
-  , cqInversions
-  , ltChooseMode
-  , ModeQ (..)
-  , mqOrd
-  , mqFromAdjIvls
-  , mqInversions
-  , normalizeCq
-  , vRotPoss
-  )
-  -}
   where
 
 import Control.Exception
 import Data.Function
 import Data.List
 import qualified Data.Set as Set
-import Haskore.Basic.Pitch
 import qualified Data.Vector as Vec
 
-import Cl
+import PiCl
 import Named
 import Util
 
-intToClass = Haskore.Basic.Pitch.fromInt
+type Relative = Int
 
 -- | A chord is a set of notes.
 type Chord = Set.Set Int
 
--- | A chord-quality is a set of pitch-classes.
+-- | A key-quality is a cycle (like a cyclical linked list with no designated
+-- start point) of pitch-classes differences.
 --
 -- E.g., the major and harmonic minor modes (which are also 13-chords)
--- have the same chord-quality.
+-- have the same key-quality, since they have the same pattern of consecutive
+-- pitch-class differences, even though they start at different places in the
+-- pattern (major starts with two whole steps, but harmonic minor starts with a
+-- whole step then a half step).
 --
--- E.g., "maj" (like C-E-G) and "b3#5" ("augmented minor"?)
--- (like E-G-B# seen with an E tonic instead of a C tonic 1st inversion)
--- have the same chord-quality.
+-- To understand the name "key-quality", consider how the C major scale and
+-- harmonic A minor scale are both considered modes of the "key of C major".
+-- So a key, like C major, fixes a cycle of adjacent pitch-classes,
+-- but doesn't say which pitch-class is "first". The "quality" of
+-- the C major key (or the D major key as well) is the "major" key-quality,
+-- which fixes a cycle of adjacent pitch-class _differences_, without choosing
+-- a "first" pitch-class difference.
 --
 -- The internal representation is positive adjacent interval differences
--- that add up to 12.
-data ChordQ = ChordQ
+-- that add up to 12. This representation doesn't allow us to automatically
+-- treat two different start-points of the same cycle as equivalent.
+-- Perhaps we should improve this.. normalize the cycle upon creation?
+data KeyQ = KeyQ
     { unCQ :: !(Vec.Vector Relative)
     } deriving (Eq, Ord)
 
@@ -51,11 +70,12 @@ data ChordQ = ChordQ
 -- E.g., the major and harmonic minor modes (which are also 13-chords)
 -- have distinct mode-qualities.
 --
--- E.g. normal chord signifiers like "maj", "min7", and "7b9#11"
--- specify mode-qualities. But note that inversions specify addition
--- information, specifying a bass note in addition to a tonic note.
--- Since normal chord signifiers may signify root position chords or not,
--- there is an ambiguity.
+-- E.g. normal quality signifiers like "maj", "min7", and "7b9#11"
+-- specify mode-qualities. But note that inversions specify additional
+-- information, specifying a bass note in addition to a tonic note. If a
+-- normal quality signifier like "maj" is used to also indicate not just
+-- "major" but further "major in root position", the "root position" part is
+-- saying something more specific than a mode-quality.
 --
 -- The internal representation is positive adjacent interval differences
 -- that add up to 12.
@@ -63,10 +83,10 @@ data ModeQ = ModeQ
     { unMQ :: !(Vec.Vector Relative)
     } deriving (Eq, Ord, Show)
 
-type Mode = Vec.Vector Cl
+type CMode = Vec.Vector PiCl
 
 {-
-intToClass :: Int -> Cl
+intToClass :: Int -> PiCl
 intToClass = go . (`mod` 12)
   where
     go 0 = C
@@ -84,16 +104,16 @@ intToClass = go . (`mod` 12)
     go _ = error "intToClass: impossible"
 -}
 
-modeAt :: ModeQ -> Cl -> Mode
-modeAt mq cl =
-    Vec.map intToCl . Vec.init . Vec.scanl (+) (clToInt cl) $ unMQ mq
+modeAt :: ModeQ -> PiCl -> CMode
+modeAt mq piCl =
+    Vec.map intToPiCl . Vec.init . Vec.scanl (+) (piClToInt piCl) $ unMQ mq
 
 mqFromAdjIvls :: [Relative] -> ModeQ
 mqFromAdjIvls rs =
     assert (sum rs == 12 && all (> 0) rs && all (< 12) rs) $
     ModeQ (Vec.fromList rs)
 
-cqInversions :: ChordQ -> [Vec.Vector Int]
+cqInversions :: KeyQ -> [Vec.Vector Int]
 cqInversions = vRotPoss . unCQ
 
 vOrd :: Vec.Vector Int -> Vec.Vector Int
@@ -111,14 +131,14 @@ mqOrd (ModeQ v) = vOrd v
 -- This is a simple algorithm to get leading-tone like behavior from
 -- things like the harmonic minor scale or much stranger.
 -- Nicely, it also happens to choose the major mode for the major scale.
-ltChooseMode :: ChordQ -> ModeQ
-ltChooseMode =
+keyQToModeQ :: KeyQ -> ModeQ
+keyQToModeQ =
     ModeQ . maximumBy (compare `on` negLastRevInit) . cqInversions
   where
     negLastRevInit v = Vec.cons (- Vec.last v) (Vec.reverse $ Vec.init v)
 
-normalizeCq :: ChordQ -> ChordQ
-normalizeCq = ChordQ . minimum . cqInversions
+normalizeCq :: KeyQ -> KeyQ
+normalizeCq = KeyQ . minimum . cqInversions
 
 vRotPoss :: Vec.Vector a -> [Vec.Vector a]
 vRotPoss v =
@@ -170,7 +190,7 @@ nameMq (ModeQ v) =
 
 genNChords :: Int -> [Named ModeQ]
 genNChords n = map (\x -> Named (nameMq x) x) . nub . sort $
-    map (ltChooseMode . ChordQ . Vec.fromList) naive
+    map (keyQToModeQ . KeyQ . Vec.fromList) naive
   where
     naive = concat
         [ map (maxIntvl :) $ grow maxIntvl (n - 1) (12 - maxIntvl)

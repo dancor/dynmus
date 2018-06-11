@@ -1,3 +1,18 @@
+Current investigation:
+- from a given hexachord (like Cnemne), what can you get to with:
+  - all stepwise motion (each voice moves <= 2 halfsteps)
+  - any fifth in the result chord is not approached in same direction by both
+    voices
+
+
+- hexachord transitions that respect some voice leading rules
+  - parallel fifths are bad
+  - step-wise motion is good
+
+C 
+
+# Old
+
 The main focus right now is a mathy theory of voice-leading in hexachord 
 transitisons.
 * Easy to learn nemne transitions?

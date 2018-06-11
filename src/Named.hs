@@ -9,3 +9,5 @@ instance Show a => Show (Named a) where
     show (Named n x) = n ++ ": " ++ show x
 
 onNamed f (Named n x) = Named n $ f x
+
+hasName name = (== name) . getName

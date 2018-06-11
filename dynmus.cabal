@@ -1,96 +1,37 @@
-name:           dynmus
-version:        0.1
-synopsis:       real-time dynamic music
-description:    currently looking at hexachord voicings
-license:        BSD3
-license-file:   LICENSE
-author:         dan corson <danl@alum.mit.edu>
-cabal-version:  >= 1.8
-build-type:     Simple
+name:                dynmus
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/githubuser/dynmus#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Daniel P Corson <danl@alum.mit.edu>
+build-type:          Simple
+cabal-version:       >=1.10
 
 source-repository head
-  type: git
+  type:     git
   location: https://github.com/dancor/dynmus
 
-flag dynmus
-  default: False
-
-executable dynmus
-  if !flag(dynmus)
-      buildable: False
-  hs-source-dirs:   src
-  main-is:          Main.hs
-  ghc-options:      -Wall -O2 -threaded
-  c-sources:        src/cbits/lol.c
-  extra-libraries:  portaudio
-  build-depends:
-      base
-    , containers
-    , MissingH
-    , mtl
-    , netwire
-    , process
-    , random
-    , split
-    , time
-    -- , tomato-rubato-openal
-    , vector
-
-flag list-chords
-  default: False
-
-executable list-chords
-  if !flag(list-chords)
-      buildable: False
-  hs-source-dirs:   src
-  main-is:          Main/list-chords.hs
-  ghc-options:      -Wall -O3
-  build-depends:
-      base
-    , containers
-    , haskore
-    , safe
-    , vector
-
-flag tran-table
-  default: False
-
 executable tran-table
-  if !flag(tran-table)
-      buildable: False
-  hs-source-dirs:   src
-  main-is:          Main/tran-table.hs
-  ghc-options:      -Wall -O3
+  hs-source-dirs: src
+  main-is:        Main/tran-table.hs
+  ghc-options:    -Wall -O3
   build-depends:
       base
     , containers
-    , haskore
+    , Euterpea
     , safe
     , text
     , vector
-
-test-suite test
-  hs-source-dirs:   src
-  main-is:          Tests.hs
-  type:             exitcode-stdio-1.0
-  build-depends:
-      base
-    , containers
-    , process
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
-    , vector
-
-flag nice-tran
-  default: False
+  default-language:    Haskell2010
 
 executable nice-tran
-  if !flag(nice-tran)
-      buildable: False
-  hs-source-dirs:   src
-  main-is:          Main/nice-tran.hs
-  ghc-options:      -Wall -O3
+  hs-source-dirs: src
+  main-is:        Main/nice-tran.hs
+  ghc-options:    -Wall -O3
   build-depends:
       base
+    , Euterpea
     , MonadRandom
+  default-language:    Haskell2010

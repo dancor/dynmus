@@ -1,7 +1,5 @@
 module Hexachord where
 
-import Haskore.Basic.Pitch
-
 import Chord
 import Named
 import Numbered

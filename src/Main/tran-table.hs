@@ -3,11 +3,13 @@
 import Data.List
 import Data.Monoid
 import qualified Data.Vector as Vec
-import Haskore.Basic.Pitch
+import Data.Word
+import qualified Euterpea.Music as E
+import Euterpea.Music (PitchClass(..))
 --import Text.Printf
 
 import Chord
-import Cl
+import PiCl
 import Hexachord
 import Named
 import Numbered
@@ -15,102 +17,103 @@ import Numbered
 data Rank = Low | Medium | High deriving (Eq, Ord, Show)
 
 data MyMode = MyMode
-    { mCl   :: !Cl
+    { mPiCl   :: !PiCl
     , _mNum  :: !Int
     , mName :: !String
-    , mMode :: !Mode
+    , mMode :: !CMode
     , _mRank :: !Rank
     } deriving Show
 
-allModes :: Vec.Vector MyMode
-allModes = Vec.fromList $
-    [ makeMyMode cl c
+subtrimonicModes :: Vec.Vector MyMode
+subtrimonicModes = Vec.fromList $
+    [ makeMyMode piCl c
+    | c <- [hNemne]
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
+    ]
+    {-
+    [ makeMyMode piCl c
+    | c <- [hNemne, hNamni, hNiman, hMano, hNom]
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
+    ]
+    ++
+    [ makeMyMode piCl c
     | c <- [hNu]
-    , cl <- [C, Cs]
+    , piCl <- [C, Cs]
     ] ++
-    [ makeMyMode cl c
-    | c <- [hNemne, hNamni, hNiman, hMano, hNom]
-    , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
+    [ makeMyMode piCl c
+    | c <- [hManetam, hMatnem, hNitar, hTamnem, hNetnar, hNetran,
+      hTamnaman, hTanmanam, hNatner, hNatrane, hTamene, hTaneme,
+      hMantnam, hNamnatam, hNatmanam, hNetme, hNatmen, hNatname,
+      hNatnarn, hTanmen, hTanir, hTrani, hTanern, hTanrane]
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
     ] ++
-    [ makeMyMode cl c
+    [ makeMyMode piCl c
     | c <- [hMantman, hNamtanam]
-    , cl <- [C, Cs, D, Ds, E, F]
-    ] ++
-    [ makeMyMode cl c
-    | c <- [hMantnam, hNamnatam, hNatmanam, hManetam,
-      hMatnem, hNatmen, hNatname, hTamnaman, hTanmanam, hNetme, hTamnem,
-      hTanmen, hTamene, hTaneme, hNatnarn, hNatner, hNatrane, hNetnar, hNetran,
-      hTanern, hTanrane, hNitar, hTanir, hTrani]
-    , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
+    , piCl <- [C, Cs, D, Ds, E, F]
     ]
+    -}
 
-{-
-myModes :: Vec.Vector MyMode
-myModes = Vec.fromList $
-    [ makeMyMode cl c
-    | c <- [hNemne, hNamni, hNiman, hMano, hNom]
-    , cl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
-    ]
--}
-{-
-    [ makeMyMode cl h
-    | h <- [hMatnem, hManetam]
-    , cl <- [C]
-    ]
--}
-
-makeMyMode :: Class -> Nnmq -> MyMode
-makeMyMode cla (Numbered n (Named name mq)) =
-    MyMode cl n name (modeAt mq cl) High
+makeMyMode :: E.PitchClass -> Nnmq -> MyMode
+makeMyMode pitchClass (Numbered n (Named name mq)) =
+    MyMode piCl n name (modeAt mq piCl) High
   where
-    cl = intToCl $ classToInt cla
+    piCl = intToPiCl $ E.pcToInt pitchClass
 
-data TranSmoothness
-  = TranSmoothness
-  { _tSDistSum :: Int
+-- lower numbers are smoother, earlier numbers matter more
+data TranUnsmoothness
+  = TranUnsmoothness
+  { _tParallelFifths :: Int
+  , _tNumJumps :: Int
+  , _tSDistSum :: Int
   , _tSHeldNotes :: Int
   , _tSDistSqrSum :: Int
-  } deriving Eq
+  } deriving (Eq, Ord)
 
-instance Ord TranSmoothness where
-  TranSmoothness d1 h1 s1 `compare` TranSmoothness d2 h2 s2 =
-    case d2 `compare` d1 of
-      LT -> LT
-      GT -> GT
-      EQ -> case h1 `compare` h2 of
-        LT -> LT
-        GT -> GT
-        EQ -> s2 `compare` s1
+instance Show TranUnsmoothness where
+  show (TranUnsmoothness p j d h s) = "para" <> show p <>
+    ",jumps" <> show j <> ",dist" <> show d <>
+    ",move" <> show (6 - h) <> ",sqr" <> show s
 
-instance Show TranSmoothness where
-  show (TranSmoothness d h s) =
-    "dist" <> show d <> ",held" <> show h <> ",sqr" <> show s
+pairs :: [a] -> [(a, a)]
+pairs [] = []
+pairs (x:xs) = map ((,) x) xs ++ pairs xs
 
-tranSmoothness :: [Cl] -> [Cl] -> TranSmoothness 
-tranSmoothness a b = TranSmoothness
+isParallelFifth ((from1,to1),(from2,to2)) =
+     from1 /= to1 && fromDiff == toDiff && isFifthy toDiff
+   where
+     fromDiff = from2 `piClMinus` from1
+     toDiff = to2 `piClMinus` to1
+
+isFifthy :: Int -> Bool
+isFifthy (-5) = True
+isFifthy 5 = True
+--isFifthy 6 = True
+isFifthy _ = False
+
+tranUnsmoothness :: [PiCl] -> [PiCl] -> TranUnsmoothness 
+tranUnsmoothness a b = TranUnsmoothness
+    (length . filter isParallelFifth . pairs $ zip a b)
+    (length $ filter (> 2) dists)
     (sum dists)
     (length . filter id $ zipWith (==) a b)
     (sum $ map (\x -> x * x) dists)
   where
-    dists = zipWith clDist a b
+    dists = zipWith piClDist a b
 
-showCls :: [Cl] -> String
-showCls = intercalate " " . map clFwStr
+showPiCls :: [PiCl] -> String
+showPiCls = intercalate " " . map show
 
 calcTran :: MyMode -> MyMode -> [String]
-calcTran a b = if mName a /= mName b || mCl b `clMinus` mCl a >= 0
+calcTran a b = if mName a /= mName b || mPiCl b `piClMinus` mPiCl a >= 0
     then 
-      [ ""
-      , show (mCl a) <> mName a <> " -> " <> show (mCl b) <> mName b <> ": " <>
-        show maxSmoothness
-      , showCls aList
-      , replicate 17 '-'
-      ] ++
-      map showCls bestTrans
+      (\(x:xs) -> x <> " -> " <> show (mPiCl b) <> mName b <> ":\t" <>
+        show minUnsmoothness : xs
+      ) (map showPiCls bestTrans)
     else []
   where
-    maxSmoothness = maximum . map (tranSmoothness aList) $ permutations bList
-    bestTrans = filter ((== maxSmoothness) . tranSmoothness aList) $
+    minUnsmoothness = minimum . map (tranUnsmoothness aList) $
+        permutations bList
+    bestTrans = filter ((== minUnsmoothness) . tranUnsmoothness aList) $
         permutations bList
     aList = Vec.toList $ mMode a
     bList = Vec.toList $ mMode b
@@ -125,16 +128,21 @@ goOnModes modes = do
     let maxI = Vec.length modes - 1
         trans =
             concat
-            [ concat
+            [ [ showPiCls (Vec.toList $ mMode a) <> " " <> show (mPiCl a) <>
+                mName a
+              , replicate 17 '-'
+              ] ++
+              concat
               [ calcTran a b
               | j <- [i + 1 .. maxI]
               , let b = modes Vec.! j
-              ]
+              ] ++
+              [""]
             | i <- [0 .. maxI]
             , let a = modes Vec.! i
-            , mCl a == Cl 0
+            , mPiCl a == PiCl 0
             ]
     mapM_ putStrLn trans
 
 main :: IO ()
-main = goOnModes allModes
+main = goOnModes subtrimonicModes
