@@ -1,13 +1,13 @@
-name:                dynmus
-version:             0.1.0.0
+name:           dynmus
+version:        0.1.0.0
 -- synopsis:
 -- description:
-homepage:            https://github.com/githubuser/dynmus#readme
-license:             BSD3
-license-file:        LICENSE
-author:              Daniel P Corson <danl@alum.mit.edu>
-build-type:          Simple
-cabal-version:       >=1.10
+homepage:       https://github.com/githubuser/dynmus#readme
+license:        BSD3
+license-file:   LICENSE
+author:         Daniel P Corson <danl@alum.mit.edu>
+build-type:     Simple
+cabal-version:  >=1.10
 
 source-repository head
   type:     git
