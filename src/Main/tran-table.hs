@@ -3,7 +3,6 @@
 import Data.List
 import Data.Monoid
 import qualified Data.Vector as Vec
-import Data.Word
 import qualified Euterpea.Music as E
 import Euterpea.Music (PitchClass(..))
 --import Text.Printf
@@ -20,42 +19,65 @@ data MyMode = MyMode
     { mPiCl   :: !PiCl
     , _mNum  :: !Int
     , mName :: !String
-    , mMode :: !CMode
+    , mMode :: !Mode
     , _mRank :: !Rank
     } deriving Show
 
 subtrimonicModes :: Vec.Vector MyMode
 subtrimonicModes = Vec.fromList $
     [ makeMyMode piCl c
-    | c <- [hNemne]
-    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
-    ]
-    {-
-    [ makeMyMode piCl c
+    -- | c <- [hNemne]
     | c <- [hNemne, hNamni, hNiman, hMano, hNom]
-    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
-    ]
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]]
     ++
     [ makeMyMode piCl c
     | c <- [hNu]
-    , piCl <- [C, Cs]
-    ] ++
+    , piCl <- [C, Cs]]
+    {-
+    ++
     [ makeMyMode piCl c
     | c <- [hManetam, hMatnem, hNitar, hTamnem, hNetnar, hNetran,
       hTamnaman, hTanmanam, hNatner, hNatrane, hTamene, hTaneme,
       hMantnam, hNamnatam, hNatmanam, hNetme, hNatmen, hNatname,
       hNatnarn, hTanmen, hTanir, hTrani, hTanern, hTanrane]
-    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]
-    ] ++
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]]
+    ++
     [ makeMyMode piCl c
     | c <- [hMantman, hNamtanam]
-    , piCl <- [C, Cs, D, Ds, E, F]
-    ]
+    , piCl <- [C, Cs, D, Ds, E, F]]
+    ++
+    -- Three 1's
+    [ makeMyMode piCl c
+    | c <- [hMatmatam]
+    , piCl <- [C, Cs, D, Ds]]
+    ++
+    [ makeMyMode piCl c
+    | c <- [hMateme, hTamtame, hTemi, hMatnatar, hNatmatar, hManter, hNamter,
+      hTamnatar, hTanmatar, hMatenar, cRantem, hTamtanar, hTrantam, hNatemar,
+      hNateram, hTantmar, hTantram, hTemnar, hTernam, hTenmar, hTerman,
+      hTemran, hTenram, hNatnatl, hNetel, hTanetal, hNateln, hNatenal,
+      hTantlan, hTantnal, hTenlan, hTelne, hTenel]
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]]
+    ++
+    -- Four 1's:
+    [ makeMyMode piCl c
+    | c <- [hTrater]
+    , piCl <- [C, Cs, D, Ds, E, F]]
+    ++
+    [ makeMyMode piCl c
+    | c <- [hTamtel, hTantej, hTertar, hMatil, hTemtal, hNatij, hTentaj, hTire,
+      hTilm, hTimal, hTijan, hTinaj]
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]]
+    ++
+    -- Five 1's:
+    [ makeMyMode piCl c
+    | c <- [hTok]
+    , piCl <- [C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B]]
     -}
 
 makeMyMode :: E.PitchClass -> Nnmq -> MyMode
 makeMyMode pitchClass (Numbered n (Named name mq)) =
-    MyMode piCl n name (modeAt mq piCl) High
+    MyMode piCl n name (modeQAt mq piCl) High
   where
     piCl = intToPiCl $ E.pcToInt pitchClass
 
@@ -78,8 +100,9 @@ pairs :: [a] -> [(a, a)]
 pairs [] = []
 pairs (x:xs) = map ((,) x) xs ++ pairs xs
 
-isParallelFifth ((from1,to1),(from2,to2)) =
-     from1 /= to1 && fromDiff == toDiff && isFifthy toDiff
+isParallelFifth :: ((PiCl, PiCl), (PiCl, PiCl)) -> Bool
+isParallelFifth ((from1, to1), (from2, to2)) =
+     from1 /= to1 && from2 /= to2 && isFifthy fromDiff && fromDiff == toDiff 
    where
      fromDiff = from2 `piClMinus` from1
      toDiff = to2 `piClMinus` to1
@@ -87,7 +110,7 @@ isParallelFifth ((from1,to1),(from2,to2)) =
 isFifthy :: Int -> Bool
 isFifthy (-5) = True
 isFifthy 5 = True
---isFifthy 6 = True
+isFifthy 6 = True
 isFifthy _ = False
 
 tranUnsmoothness :: [PiCl] -> [PiCl] -> TranUnsmoothness 
@@ -123,8 +146,8 @@ hexColor :: Int -> Int -> Int -> String
 hexColor r g b = '#' : printf "%02x%02x%02x" r g b
 -}
 
-goOnModes :: Vec.Vector MyMode -> IO ()
-goOnModes modes = do
+findTransInModes :: Vec.Vector MyMode -> IO ()
+findTransInModes modes = do
     let maxI = Vec.length modes - 1
         trans =
             concat
@@ -145,4 +168,4 @@ goOnModes modes = do
     mapM_ putStrLn trans
 
 main :: IO ()
-main = goOnModes subtrimonicModes
+main = findTransInModes subtrimonicModes

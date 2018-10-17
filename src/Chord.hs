@@ -24,9 +24,11 @@
 module Chord
   where
 
+import Control.Arrow
 import Control.Exception
 import Data.Function
 import Data.List
+import Data.Monoid
 import qualified Data.Set as Set
 import qualified Data.Vector as Vec
 
@@ -61,7 +63,7 @@ type Chord = Set.Set Int
 -- treat two different start-points of the same cycle as equivalent.
 -- Perhaps we should improve this.. normalize the cycle upon creation?
 data KeyQ = KeyQ
-    { unCQ :: !(Vec.Vector Relative)
+    { unKeyQ :: !(Vec.Vector Relative)
     } deriving (Eq, Ord)
 
 -- | A mode-quality is a set of pitch-classes one of which is chosen to be
@@ -80,10 +82,12 @@ data KeyQ = KeyQ
 -- The internal representation is positive adjacent interval differences
 -- that add up to 12.
 data ModeQ = ModeQ
-    { unMQ :: !(Vec.Vector Relative)
+    { unModeQ :: !(Vec.Vector Relative)
     } deriving (Eq, Ord, Show)
 
-type CMode = Vec.Vector PiCl
+-- True Modes should have no repeat PiCls and have the PiCls in an ascending
+-- order fitting within some octave.
+type Mode = Vec.Vector PiCl
 
 {-
 intToClass :: Int -> PiCl
@@ -104,23 +108,23 @@ intToClass = go . (`mod` 12)
     go _ = error "intToClass: impossible"
 -}
 
-modeAt :: ModeQ -> PiCl -> CMode
-modeAt mq piCl =
-    Vec.map intToPiCl . Vec.init . Vec.scanl (+) (piClToInt piCl) $ unMQ mq
+modeQAt :: ModeQ -> PiCl -> Mode
+modeQAt mq piCl =
+    Vec.map intToPiCl . Vec.init . Vec.scanl (+) (piClToInt piCl) $ unModeQ mq
 
 mqFromAdjIvls :: [Relative] -> ModeQ
 mqFromAdjIvls rs =
-    assert (sum rs == 12 && all (> 0) rs && all (< 12) rs) $
+    assert (sum rs == 12 && all (> 0) rs) $
     ModeQ (Vec.fromList rs)
 
-cqInversions :: KeyQ -> [Vec.Vector Int]
-cqInversions = vRotPoss . unCQ
+keyQInversions :: KeyQ -> [Vec.Vector Int]
+keyQInversions = vRotPoss . unKeyQ
 
 vOrd :: Vec.Vector Int -> Vec.Vector Int
 vOrd = Vec.scanl1 (+) . Vec.init
 
 mqInversions :: ModeQ -> [Vec.Vector Int]
-mqInversions = map vOrd . vRotPoss . unMQ
+mqInversions = map vOrd . vRotPoss . unModeQ
 
 mqOrd :: ModeQ -> Vec.Vector Int
 mqOrd (ModeQ v) = vOrd v
@@ -131,14 +135,16 @@ mqOrd (ModeQ v) = vOrd v
 -- This is a simple algorithm to get leading-tone like behavior from
 -- things like the harmonic minor scale or much stranger.
 -- Nicely, it also happens to choose the major mode for the major scale.
-keyQToModeQ :: KeyQ -> ModeQ
+--
+-- This function returns the inversion-number and the resulting ModeQ. The
+-- inversion number is 0 if the ModeQ matches the KeyQ, 1 if the ModeQ starts
+-- 1 element in, etc.
+keyQToModeQ :: KeyQ -> (Int, ModeQ)
 keyQToModeQ =
-    ModeQ . maximumBy (compare `on` negLastRevInit) . cqInversions
+    second ModeQ . maximumBy (compare `on` negLastRevInit . snd) . zip [0..] . 
+    keyQInversions
   where
     negLastRevInit v = Vec.cons (- Vec.last v) (Vec.reverse $ Vec.init v)
-
-normalizeCq :: KeyQ -> KeyQ
-normalizeCq = KeyQ . minimum . cqInversions
 
 vRotPoss :: Vec.Vector a -> [Vec.Vector a]
 vRotPoss v =
@@ -190,7 +196,7 @@ nameMq (ModeQ v) =
 
 genNChords :: Int -> [Named ModeQ]
 genNChords n = map (\x -> Named (nameMq x) x) . nub . sort $
-    map (keyQToModeQ . KeyQ . Vec.fromList) naive
+    map (snd . keyQToModeQ . KeyQ . Vec.fromList) naive
   where
     naive = concat
         [ map (maxIntvl :) $ grow maxIntvl (n - 1) (12 - maxIntvl)
@@ -212,6 +218,18 @@ ascToDiffs v = Vec.zipWith (-) (Vec.snoc (Vec.tail v) (12 + Vec.head v)) v
 subchords :: ModeQ -> [ModeQ]
 subchords (ModeQ v) =
     map (ModeQ . ascToDiffs . snd) . pullEachElem $ diffsToAsc v
+
+submodes :: Mode -> [Mode]
+submodes = map snd . pullEachElem
+
+modeToModeQ :: Mode -> ModeQ
+modeToModeQ m = ModeQ $
+    Vec.zipWith piClDiff (Vec.tail m <> Vec.singleton (Vec.head m)) m
+
+nameMode :: Mode -> (PiCl, String)
+nameMode m = (m Vec.! inversionIndex, nameMq stdMq)
+  where
+    (inversionIndex, stdMq) = keyQToModeQ $ KeyQ $ unModeQ $ modeToModeQ m
 
 {-
 trichords :: [Named ModeQ]
@@ -240,5 +258,5 @@ trichords =
 nmqAtCl :: Named ModeQ -> Cl -> Named ClSet
 nmqAtCl (Named n mq) c = Named (showCl c <> n) . Set.fromList .
     map (Cl . (`mod` 12)) . scanl (+) (unCl c) . map fromIntegral .
-    Vec.toList $ unMQ mq
+    Vec.toList $ unModeQ mq
     -}
