@@ -35,3 +35,13 @@ executable nice-tran
     , Euterpea
     , MonadRandom
   default-language:    Haskell2010
+
+executable waveplay
+  hs-source-dirs: src
+  main-is:        Main/waveplay.hs
+  ghc-options:    -Wall -O3
+  build-depends:
+      base
+    , Euterpea
+    , MonadRandom
+  default-language:    Haskell2010
