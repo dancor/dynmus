@@ -23,7 +23,7 @@ readNoteLtr 'A' = 9
 readNoteLtr 'B' = 11
 readNoteLtr c = error $ "readNoteLtr: " ++ show c
 
-showPc :: Pc -> String
+showPc :: Pc -> Text
 showPc 0 = "C "
 showPc 1 = "C#"
 showPc 2 = "D "
@@ -37,7 +37,7 @@ showPc 9 = "A "
 showPc 10 = "A#"
 showPc 11 = "B "
 
-showPcMb :: Maybe Pc -> String
+showPcMb :: Maybe Pc -> Text
 showPcMb Nothing = ". "
 showPcMb (Just 0) = "C "
 showPcMb (Just 1) = "C#"
@@ -70,9 +70,13 @@ readChordNote t = let
     | otherwise -> finish 0 t2 after2
 
 readChord :: Text -> Chord
-readChord t = V.fromList. map readChordNote $ T.words t
+readChord t = V.fromList . map readChordNote $ T.words t
 
 readChords = map readChord . T.lines
+
+--readChords :: Text -> 
+--readChords t = fromVector (Z:.6:.V.length v) $ V.concat v
+--  where v = V.fromList . map readChord $ T.lines t
 
 allClsSet :: Set Word8
 allClsSet = Set.fromList [0..11]
@@ -82,21 +86,29 @@ setRandPull s = do
     i <- getRandomR (0, Set.size s - 1)
     return (Set.elemAt i s, Set.deleteAt i s)
 
-fillChord :: RandomGen g => Chord -> Rand g Chord
-fillChord c = V.fromList <$> go ns0 (V.toList c) where
+fillChord :: RandomGen g => Chord -> Chord -> Rand g Chord
+fillChord prevC c = V.fromList <$> go ns0 (V.toList prevC) (V.toList c) where
   ns0 = foldl' (flip Set.delete) allClsSet (catMaybes $ V.toList c)
-  go _ [] = return []
-  go ns (Nothing:rest) = do
+  go _ [] [] = return []
+  go ns (prevN:prevRest) (Nothing:rest) = do
     (n, ns2) <- setRandPull ns
-    (Just n:) <$> go ns2 rest
-  go ns (n:rest) = (n:) <$> go ns rest
+    (Just n:) <$> go ns2 prevRest rest
+  go ns (_:prevRest) (n:rest) = (n:) <$> go ns prevRest rest
 
-showChord = intercalate " " . map showPcMb . V.toList
+showChord :: Chord -> Text
+showChord = T.intercalate " " . map showPcMb . V.toList
+
+empty6Chord = V.replicate 6 Nothing
+
+fillChords :: RandomGen g => [Chord] -> Rand g [Chord]
+fillChords = go empty6Chord where
+  go cPrev (c:cs) = liftM2 (:) (fillChord cPrev c) (go c cs)
+  go _ [] = return []
 
 main = do
-    c1:_ <- readChords <$> T.readFile "ex.txt"
-    --mapM_ print c
-    putStrLn . showChord $ evalRand (fillChord c1) (mkStdGen 0)
+    cs <- readChords <$> T.readFile "ex.txt"
+    let ds = evalRand (fillChords cs) (mkStdGen 0)
+    mapM_ (T.putStrLn . showChord) ds
 
 {-
 readChordNote :: Text -> Maybe Note
