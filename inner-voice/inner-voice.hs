@@ -81,34 +81,75 @@ readChords = map readChord . T.lines
 allClsSet :: Set Word8
 allClsSet = Set.fromList [0..11]
 
+shuffle :: MonadRandom m => [a] -> m [a]
+shuffle l = do
+    rndInts <- getRandoms
+    return . map snd . sortBy (compare `on` fst) $ zip (rndInts :: [Int]) l
+
+setRandPulls :: (MonadRandom m, Ord a) => Set a -> m [(a, Set a)]
+setRandPulls s = do
+    is <- shuffle [0 .. Set.size s - 1]
+    return [(Set.elemAt i s, Set.deleteAt i s) | i <- is]
+
 setRandPull :: (MonadRandom m, Ord a) => Set a -> m (a, Set a)
 setRandPull s = do
     i <- getRandomR (0, Set.size s - 1)
     return (Set.elemAt i s, Set.deleteAt i s)
 
-fillChord :: RandomGen g => Chord -> Chord -> Rand g Chord
-fillChord prevC c = V.fromList <$> go ns0 (V.toList prevC) (V.toList c) where
+n1 `noteDiff` n2 = (n1 - n2 + 6) `mod` 12 - 6
+
+fillChord :: RandomGen g => Chord -> Chord -> Rand g [Chord]
+fillChord prevC c = map V.fromList <$> go ns0 (V.toList prevC) (V.toList c)
+  where
   ns0 = foldl' (flip Set.delete) allClsSet (catMaybes $ V.toList c)
-  go _ [] [] = return []
-  go ns (prevN:prevRest) (Nothing:rest) = do
-    (n, ns2) <- setRandPull ns
-    (Just n:) <$> go ns2 prevRest rest
-  go ns (_:prevRest) (n:rest) = (n:) <$> go ns prevRest rest
+  go _ [] _ = return [[]]
+  go _ _ [] = return [[]]
+  go ns (prevN:prevRest) (Nothing:rest) = if Set.null ns then return [] else do
+    nNs2s <- setRandPulls ns
+    concat <$> sequence [map (Just n:) <$> go ns2 prevRest rest
+        | (n, ns2) <- nNs2s
+        , isNothing prevN || abs (noteDiff n (fromJust prevN)) <= 1]
+  go ns (_:prevRest) (n:rest) = map (n:) <$> go ns prevRest rest
 
 showChord :: Chord -> Text
 showChord = T.intercalate " " . map showPcMb . V.toList
 
 empty6Chord = V.replicate 6 Nothing
 
+-- Returns a list of all possible ways of continuing all chords
+fillChords :: RandomGen g => [Chord] -> Rand g [[Chord]]
+fillChords = go empty6Chord where
+  --go cPrev (c:cs) = liftM2 (liftM2 (:)) (fillChord cPrev c) (go c cs)
+  go cPrev (c:cs) = do
+    fills <- fillChord cPrev c
+    allContsByFill <- sequence [go fill cs | fill <- fills]
+    return . concat $ zipWith (\fill allConts -> map (fill :)
+        allConts) fills allContsByFill
+  go _ [] = return [[]]
+
+{-
 fillChords :: RandomGen g => [Chord] -> Rand g [Chord]
 fillChords = go empty6Chord where
-  go cPrev (c:cs) = liftM2 (:) (fillChord cPrev c) (go c cs)
+  go cPrev (c:cs) = liftM2 (:) (fst <$> fillChord cPrev c) (go c cs)
   go _ [] = return []
+-}
 
 main = do
+    --cs <- take 2 . readChords <$> T.readFile "ex.txt"
+    --let ds = take 1 $ evalRand (fillChords cs) (mkStdGen 0)
+    
     cs <- readChords <$> T.readFile "ex.txt"
-    let ds = evalRand (fillChords cs) (mkStdGen 0)
-    mapM_ (T.putStrLn . showChord) ds
+    let ds = take 10 $ evalRand (fillChords cs) (mkStdGen 0)
+    
+    --c1:c2:_ <- readChords <$> T.readFile "ex.txt"
+    --let d1 = head $ evalRand (fillChord empty6Chord c1) (mkStdGen 0)
+    --    d2 = head $ evalRand (fillChord d1 c2) (mkStdGen 0)
+    --    ds = [[d1, d2]]
+    
+    --c <- head . readChords <$> T.readFile "ex.txt"
+    --let ds = take 10 $ evalRand (fillChord empty6Chord c) (mkStdGen 0)
+    
+    mapM_ ((>> T.putStrLn "") . mapM_ (T.putStrLn . showChord)) ds
 
 {-
 readChordNote :: Text -> Maybe Note
